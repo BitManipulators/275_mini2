@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package collision_proto;
+
+enum Condition {
+    EQUALS = 0;
+    NOT_EQUALS = 1;
+}
+
+enum QueryFields {
+    
+    CRASH_DATE = 0;
+    CRASH_TIME = 1;
+    BOROUGH = 2 ;
+    ZIP_CODE = 3;
+    LATITUDE = 4;
+    LONGITUDE = 5;
+    LOCATION = 6;
+    ON_STREET_NAME = 7;
+    CROSS_STREET_NAME = 8 ;
+    OFF_STREET_NAME = 9 ;
+    NUMBER_OF_PERSONS_INJURED = 10 ;
+    NUMBER_OF_PERSONS_KILLED = 11 ;
+    NUMBER_OF_PEDESTRIANS_INJURED = 12 ;
+    NUMBER_OF_PEDESTRIANS_KILLED = 13 ;
+    NUMBER_OF_CYCLIST_INJURED = 14;
+    NUMBER_OF_CYCLIST_KILLED = 15 ;
+    NUMBER_OF_MOTORIST_INJURED = 16 ;
+    NUMBER_OF_MOTORIST_KILLED = 17 ;
+    CONTRIBUTING_FACTOR_VEHICLE_1 = 18 ;
+    CONTRIBUTING_FACTOR_VEHICLE_2 = 19 ;
+    CONTRIBUTING_FACTOR_VEHICLE_3 = 20 ;
+    CONTRIBUTING_FACTOR_VEHICLE_4 = 21 ;
+    CONTRIBUTING_FACTOR_VEHICLE_5 = 22 ;
+    COLLISION_ID = 23 ;
+    VEHICLE_TYPE_CODE_1 = 24 ;
+    VEHICLE_TYPE_CODE_2 = 25 ;
+    VEHICLE_TYPE_CODE_3 = 26 ;
+    VEHICLE_TYPE_CODE_4 = 27 ;
+    VEHICLE_TYPE_CODE_5 = 28 ;
+    
+}
+
+message QueryCondition {
+    QueryFields field = 1;
+    Condition condition = 2;
+    oneof data {
+
+        string str_data = 3;
+        int32 int_data = 4;
+
+    }
+}
+
+message QueryRequest {
+    repeated QueryCondition queries = 1;
+}
+
+message Collision {
+    string crash_date = 1; 
+    string crash_time = 2; 
+    string borough = 3; 
+    uint32 zip_code = 4; 
+    float latitude = 5; 
+    float longitude = 6; 
+    string location = 7; 
+    string on_street_name = 8; 
+    string cross_street_name = 9; 
+    string off_street_name = 10; 
+    uint32 number_of_persons_injured = 11; 
+    uint32 number_of_persons_killed = 12; 
+    uint32 number_of_pedestrians_injured = 13; 
+    uint32 number_of_pedestrians_killed = 14; 
+    uint32 number_of_cyclist_injured = 15; 
+    uint32 number_of_cyclist_killed = 16; 
+    uint32 number_of_motorist_injured = 17; 
+    uint32 number_of_motorist_killed = 18; 
+    string contributing_factor_vehicle_1 = 19; 
+    string contributing_factor_vehicle_2 = 20; 
+    string contributing_factor_vehicle_3 = 21; 
+    string contributing_factor_vehicle_4 = 22; 
+    string contributing_factor_vehicle_5 = 23; 
+    uint64 collision_id = 24; 
+    string vehicle_type_code_1 = 25; 
+    string vehicle_type_code_2 = 26; 
+    string vehicle_type_code_3 = 27; 
+    string vehicle_type_code_4 = 28; 
+    string vehicle_type_code_5 = 29; 
+}
+
+message QueryResponse {
+    repeated Collision collision = 1;
+}
+
+service CollisionQueryService {
+    rpc GetCollisions (QueryRequest) returns (QueryResponse);
+}
