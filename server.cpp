@@ -14,10 +14,10 @@
 
 using Value = std::variant<float, size_t, std::string, std::chrono::year_month_day, std::chrono::hh_mm_ss<std::chrono::minutes>, std::uint8_t, std::uint32_t>;
 
-static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(std::string("/home/suriya-018231499/sem2/cmpe273/mini2/collisionproject/275_mini1/temp2/MotorVehicleCollisionData_subset.csv"));
+static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(std::string("../MotorVehicleCollisionData_subset.csv"));
 
 struct InternalQuery {
-    
+
     public:
 
         InternalQuery(CollisionField f, QueryType t, Value v): field(f),type(t),val(v){}
@@ -40,20 +40,18 @@ class QueryWrapper{
         Value value;
         CollisionField field;
         QueryType type;
-        
-        
-        
+
         for (const auto& item : request->queries()){
-                
+
                 field = get_match_field(item.field());
                 type = get_match_condition(item.condition());
-                
+
                 if (field == CollisionField::BOROUGH){
                     value = item.str_data();
-                
-                
+
+
                 }else if (field == CollisionField::ZIP_CODE){
-                    
+
                    int32_t  zip = item.int_data();
                    value = static_cast<uint32_t> (zip);
                 }
@@ -63,22 +61,22 @@ class QueryWrapper{
         }
 
         std::cout << "vector query size - " << queries.size() << std::endl;
-        
+
         Query query = Query::create(queries[0].field , queries[0].type, queries[0].val);
 
-        std::vector<InternalQuery>::iterator it; 
-        
+        std::vector<InternalQuery>::iterator it;
+
         for ( it = queries.begin()+1 ; it != queries.end(); it++ ){
              query.add( it->field, it->type, it->val);
         }
         return query;
-        
+
         }
 
         static void ConvertToProto(const CollisionProxy* data_struct, collision_proto::Collision*  proto_data) {
 
             // Convert crash date (assuming it's in the form std::chrono::year_month_day)
-            
+
             /*
             if (data_struct->crash_date != std::chrono::year_month_day{}) {  // Check if the date is set
                 std::ostringstream date_stream;
@@ -98,11 +96,11 @@ class QueryWrapper{
             }*/
 
             // Convert optional fields using has_value() for std::optional
-            
+
             if (data_struct->borough && data_struct->borough->has_value()) {
                 proto_data->set_borough(data_struct->borough->value());
             }
-            
+
             if (data_struct->zip_code && data_struct->zip_code->has_value()) {
                 proto_data->set_zip_code(data_struct->zip_code->value());
             }
@@ -207,9 +205,9 @@ class QueryWrapper{
                 proto_data->set_vehicle_type_code_5(data_struct->vehicle_type_code_5->value());
             }
         };
-    
+
     private:
-        
+
         static QueryType get_match_condition(collision_proto::Condition condition){
 
             if (condition == collision_proto::Condition::EQUALS){
@@ -219,7 +217,7 @@ class QueryWrapper{
             return {};
         };
 
-        
+
         static CollisionField get_match_field(collision_proto::QueryFields field){
 
             if (field == collision_proto::QueryFields::BOROUGH){
@@ -238,15 +236,15 @@ class QueryWrapper{
 class CollisionQueryServiceImpl final : public collision_proto::CollisionQueryService::Service{
 
 public:
-    
+
     grpc::Status GetCollisions(grpc::ServerContext* context, const collision_proto::QueryRequest* request, collision_proto::QueryResponse* response) override{
-        
-        
+
+
         Query query = QueryWrapper::get_construted_query(request);
         std::vector<CollisionProxy*> collisions = collision_manager->searchOpenMp(query);
-        
+
         std::cout << "collison size" << collisions.size() << std::endl;
-        
+
         int counter= 100;
         for (auto proxy : collisions ){
             if (counter == 0){
@@ -256,7 +254,7 @@ public:
             QueryWrapper::ConvertToProto(proxy, collision);
             counter--;
         }
-        
+
         return grpc::Status::OK;
     }
 
@@ -281,7 +279,7 @@ void RunServer(){
 }
 
 int main(int argc, char *argv[]){
-    
+
     RunServer();
     return 0;
 }
