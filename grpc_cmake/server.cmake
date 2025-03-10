@@ -37,6 +37,51 @@ target_link_libraries(cm_grpc_proto
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF})
 
+#------------------------------------------------------------
+
+# Define the output Python files in the build directory
+set(GENERATED_PYTHON_FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/collision_pb2.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/collision_pb2_grpc.py"
+)
+
+# Add a custom command to generate Python gRPC files using python3
+add_custom_command(
+    OUTPUT ${GENERATED_PYTHON_FILES}
+    COMMAND ${CMAKE_COMMAND} -E env python3 -m grpc_tools.protoc
+            -I ${cm_proto_path}
+            --python_out=${CMAKE_CURRENT_BINARY_DIR}
+            --grpc_python_out=${CMAKE_CURRENT_BINARY_DIR}
+            ${cm_proto}
+    DEPENDS ${cm_proto}
+)
+
+# Create a custom target that depends on the generated files
+add_custom_target(generate_python_grpc ALL
+    DEPENDS ${GENERATED_PYTHON_FILES}
+)
+
+#------------------------------------------------------------
+
+# Copy the Python client script to the binary directory.
+configure_file(${CMAKE_SOURCE_DIR}/client.py ${CMAKE_CURRENT_BINARY_DIR}/client.py COPYONLY)
+
+# Mark the copied script as executable (only works on UNIX-like systems).
+if(UNIX)
+  execute_process(
+    COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/client.py
+  )
+endif()
+
+# Create a custom target for the Python client.
+add_custom_target(python_client ALL
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/client.py
+  COMMENT "Running Python client"
+)
+
+# Optionally, if you want both executables to be in a unified list, you can list them:
+set(CLIENT_TARGETS python_client)
+
 # Targets greeter_[async_](client|server)
 foreach(_target
   server client
