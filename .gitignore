@@ -1,0 +1,8 @@
+b/
+build/
+
+*.csv
+*.tar.gz
+
+*.md
+.vscode
