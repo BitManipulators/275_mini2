@@ -39,6 +39,45 @@ target_link_libraries(cm_grpc_proto
 
 #------------------------------------------------------------
 
+find_package(Python REQUIRED COMPONENTS Interpreter)
+
+# Function to check if a Python package is installed
+function(check_python_package package_name result_var)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import ${package_name}"
+        RESULT_VARIABLE exit_code
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+    if(exit_code EQUAL 0)
+        set(${result_var} TRUE PARENT_SCOPE)
+    else()
+        set(${result_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+# Check for grpcio and grpcio-tools
+check_python_package(grpc GRPCIO_FOUND)
+check_python_package(grpc_tools GRPCIO_TOOLS_FOUND)
+
+if(GRPCIO_FOUND)
+    message(STATUS "Found grpcio")
+else()
+    message(WARNING "grpcio not found")
+endif()
+
+if(GRPCIO_TOOLS_FOUND)
+    message(STATUS "Found grpcio-tools")
+else()
+    message(WARNING "grpcio-tools not found")
+endif()
+
+if(NOT GRPCIO_FOUND OR NOT GRPCIO_TOOLS_FOUND)
+    message(FATAL_ERROR "Required Python packages not found. Please install grpcio and grpcio-tools.")
+endif()
+
+#------------------------------------------------------------
+
 # Define the output Python files in the build directory
 set(GENERATED_PYTHON_FILES
     "${CMAKE_CURRENT_BINARY_DIR}/collision_pb2.py"
