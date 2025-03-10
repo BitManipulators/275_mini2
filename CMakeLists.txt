@@ -98,5 +98,12 @@ enable_testing()
 include(GoogleTest)
 gtest_discover_tests(collision_manager_test)
 
+add_executable(yaml_parser yaml_parser.cpp)
+
+# Find yaml-cpp package
+find_package(yaml-cpp REQUIRED)
+
+target_link_libraries(yaml_parser yaml-cpp)
+
 include(./grpc_cmake/common.cmake)
 include(./grpc_cmake/server.cmake)
