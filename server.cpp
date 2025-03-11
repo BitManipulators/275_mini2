@@ -3,9 +3,9 @@
 
 
 
-#include "collision.hpp"
-#include "collision_manager.hpp"
-#include "query.hpp"
+#include "collision_manager/collision.hpp"
+#include "collision_manager/collision_manager.hpp"
+#include "collision_manager/query.hpp"
 #include <filesystem>
 
 

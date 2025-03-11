@@ -5,7 +5,7 @@ if(APPLE)
    set(CMAKE_CXX_COMPILER /usr/local/Homebrew/bin/g++-14)
 endif()
 
-project(collision_manager)
+project(distributed_collision_manager)
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
@@ -56,47 +56,9 @@ endif()
 
 FetchContent_MakeAvailable(benchmark)
 
-add_library(collision_manager query.cpp collision.cpp collision_parser.cpp collision_manager.cpp)
-target_link_libraries(collision_manager PUBLIC OpenMP::OpenMP_CXX)
-
-add_executable(main main.cpp)
-target_link_libraries(main collision_manager)
-
-add_executable(
-  collision_manager_test
-  collision_manager_test.cpp
-)
-
-target_link_libraries(
-  collision_manager_test
-  collision_manager
-  GTest::gtest_main
-)
-
-add_executable(
-  collision_manager_benchmark
-  collision_manager_benchmark.cpp
-)
-target_link_libraries(
-  collision_manager_benchmark
-  collision_manager
-  benchmark::benchmark_main
-)
-
-add_executable(
-  collision_parser_benchmark
-  collision_parser_benchmark.cpp
-)
-target_link_libraries(
-  collision_parser_benchmark
-  collision_manager
-  benchmark::benchmark_main
-)
-
 enable_testing()
 
 include(GoogleTest)
-gtest_discover_tests(collision_manager_test)
 
 add_executable(yaml_parser yaml_parser.cpp)
 
@@ -111,3 +73,5 @@ target_link_libraries(yaml_parser yaml-cpp)
 
 include(./grpc_cmake/common.cmake)
 include(./grpc_cmake/server.cmake)
+
+add_subdirectory(collision_manager)
