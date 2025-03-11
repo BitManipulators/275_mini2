@@ -100,8 +100,12 @@ gtest_discover_tests(collision_manager_test)
 
 add_executable(yaml_parser yaml_parser.cpp)
 
-# Find yaml-cpp package
-find_package(yaml-cpp REQUIRED)
+FetchContent_Declare(
+  yaml-cpp
+  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG 0.8.0
+)
+FetchContent_MakeAvailable(yaml-cpp)
 
 target_link_libraries(yaml_parser yaml-cpp)
 
