@@ -98,11 +98,22 @@ Query& Query::add(const CollisionField& name, const QueryType& type, const Value
 }
 
 Query& Query::add(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier) {
-    queries.push_back(create_field_query(name,
-                                         not_qualifier,
-                                         type,
-                                         value,
-                                         case_insensitive_qualifier));
+    return add(create_field_query(name,
+                                  not_qualifier,
+                                  type,
+                                  value,
+                                  case_insensitive_qualifier));
+}
+
+Query& Query::add(const Query& query) {
+    for (const FieldQuery& field_query : query.queries) {
+        add(std::move(field_query));
+    }
+    return *this;
+}
+
+Query& Query::add(const FieldQuery&& field_query) {
+    queries.push_back(field_query);
     return *this;
 }
 

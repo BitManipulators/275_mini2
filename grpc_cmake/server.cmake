@@ -121,17 +121,27 @@ add_custom_target(python_client ALL
 # Optionally, if you want both executables to be in a unified list, you can list them:
 set(CLIENT_TARGETS python_client)
 
+add_library(
+    collision_proto_converters
+    collision_proto_converter.cpp
+    query_proto_converter.cpp
+)
+target_link_libraries(
+    collision_proto_converters
+    cm_grpc_proto
+)
+
 # Targets greeter_[async_](client|server)
 foreach(_target
   server client
   )
   add_executable(${_target} "${_target}.cpp")
   target_link_libraries(${_target}
-    cm_grpc_proto
     absl::check
     absl::flags
     absl::flags_parse
     absl::log
+    collision_proto_converters
     collision_manager
     ${_REFLECTION}
     ${_GRPC_GRPCPP}

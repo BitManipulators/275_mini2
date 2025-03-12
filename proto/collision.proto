@@ -2,9 +2,12 @@ syntax = "proto3";
 
 package collision_proto;
 
-enum Condition {
-    EQUALS = 0;
-    NOT_EQUALS = 1;
+enum QueryType {
+    HAS_VALUE = 0;
+    EQUALS = 1;
+    LESS_THAN = 2;
+    GREATER_THAN = 3;
+    CONTAINS = 4;
 }
 
 enum QueryFields {
@@ -43,13 +46,19 @@ enum QueryFields {
 
 message QueryCondition {
     QueryFields field = 1;
-    Condition condition = 2;
+    QueryType type = 2;
     oneof data {
 
-        string str_data = 3;
-        int32 int_data = 4;
+        string string_data = 3;
+        uint32 uint8_data = 4;
+        uint32 uint32_data = 5;
+        uint64 uint64_data = 6;
+        float float_data = 7;
 
     }
+
+    optional bool not = 8;
+    optional bool case_insensitive = 9;
 }
 
 message QueryRequest {
