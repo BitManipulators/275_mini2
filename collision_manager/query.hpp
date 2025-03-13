@@ -7,7 +7,14 @@
 #include <string>
 #include <string_view>
 
-using Value = std::variant<float, size_t, std::string, std::chrono::year_month_day, std::chrono::hh_mm_ss<std::chrono::minutes>, std::uint8_t, std::uint32_t>;
+using Value = std::variant<
+    float,
+    size_t,
+    std::string,
+    std::chrono::year_month_day,
+    std::chrono::hh_mm_ss<std::chrono::minutes>,
+    std::uint8_t,
+    std::uint32_t>;
 
 enum class QueryType { HAS_VALUE, EQUALS, LESS_THAN, GREATER_THAN, CONTAINS };
 enum class Qualifier { NONE, NOT, CASE_INSENSITIVE };
@@ -29,6 +36,7 @@ private:
 
 public:
     friend class Query;
+    friend class QueryProtoConverter;
 
     const CollisionField& get_name() const;
     const QueryType& get_type() const;
@@ -54,6 +62,7 @@ private:
 public:
     const std::vector<FieldQuery>& get() const;
 
+    Query& add(const Query& query);
     Query& add(const CollisionField& name, const QueryType& type, const Value value);
     Query& add(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value);
     Query& add(const CollisionField& name, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier);
@@ -63,4 +72,7 @@ public:
     static Query create(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value);
     static Query create(const CollisionField& name, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier);
     static Query create(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier);
+
+private:
+    Query& add(const FieldQuery&& field_query);
 };
