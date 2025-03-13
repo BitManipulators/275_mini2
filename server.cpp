@@ -23,14 +23,12 @@ public:
 
         std::cout << "collison size" << collisions.size() << std::endl;
 
-        int counter= 100;
+        
         for (auto proxy : collisions ){
-            if (counter == 0){
-                break;
-            }
+           
             collision_proto::Collision* collision = response->add_collision();
             CollisionProtoConverter::serialize(proxy, collision);
-            counter--;
+            
         }
 
         return grpc::Status::OK;
@@ -43,6 +41,8 @@ void RunServer() {
     CollisionQueryServiceImpl service;
 
     grpc::ServerBuilder builder;
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.SetMaxSendMessageSize(500*1024*1024);
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
