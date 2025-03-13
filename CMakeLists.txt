@@ -71,6 +71,39 @@ FetchContent_MakeAvailable(yaml-cpp)
 
 target_link_libraries(yaml_parser yaml-cpp)
 
+add_custom_target(run_process_a
+  COMMAND env RANK=0 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
+  DEPENDS main
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Custom target to run Process-B with environment variables set
+add_custom_target(run_process_b
+  COMMAND env RANK=1 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
+  DEPENDS main
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_custom_target(run_process_c
+  COMMAND env RANK=2 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
+  DEPENDS main
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Custom target to run Process-B with environment variables set
+add_custom_target(run_process_d
+  COMMAND env RANK=3 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
+  DEPENDS main
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_custom_target(run_process_e
+  COMMAND env RANK=4 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
+  DEPENDS main
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+
 include(./grpc_cmake/common.cmake)
 include(./grpc_cmake/server.cmake)
 
