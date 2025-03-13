@@ -14,7 +14,8 @@
 
 using Value = std::variant<float, size_t, std::string, std::chrono::year_month_day, std::chrono::hh_mm_ss<std::chrono::minutes>, std::uint8_t, std::uint32_t>;
 
-static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(std::string("../MotorVehicleCollisionData_subset.csv"));
+//static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(std::string("../MotorVehicleCollisionData_subset.csv"));
+static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(std::string("/home/suriya-018231499/cpp_projects/parser_data/Motor_Vehicle_Collisions_-_Crashes_20250204.csv"));
 
 struct InternalQuery {
 
@@ -27,6 +28,7 @@ struct InternalQuery {
 
 };
 
+enum class ConversionType{INT32, INT64, FLOAT, STRING};
 
 class QueryWrapper{
 
@@ -46,7 +48,20 @@ class QueryWrapper{
                 field = get_match_field(item.field());
                 type = get_match_condition(item.condition());
 
-                if (field == CollisionField::BOROUGH){
+                if (ConversionType::STRING == get_conversion_type(field)){
+                    value = item.str_value();
+                
+                }else if (ConversionType::INT32 == get_conversion_type(field)){
+                    
+                    int32_t int32_value = item.int_value();
+                    value = static_cast<uint32_t> (int32_value);
+                }else if(ConversionType::FLOAT == get_conversion_type(field)){
+                    value = item.float_value();
+                }
+
+                
+                
+                /*if (field == CollisionField::BOROUGH){
                     value = item.str_data();
 
 
@@ -54,7 +69,8 @@ class QueryWrapper{
 
                    int32_t  zip = item.int_data();
                    value = static_cast<uint32_t> (zip);
-                }
+                }*/
+                
                 std::visit ([](auto&& arg){ std::cout<< arg << std::endl;},value);
                 InternalQuery gq(field,type,value);
                 queries.push_back(gq);
@@ -224,11 +240,34 @@ class QueryWrapper{
                 return CollisionField::BOROUGH;
             }else if (field == collision_proto::QueryFields::ZIP_CODE){
                 return CollisionField::ZIP_CODE;
+            }else if (field == collision_proto :: QueryFields::LATITUDE){
+                return CollisionField::LATITUDE;
             }
             std::cerr<< "Error" << std::endl;
             return {};
 
         }
+
+        static ConversionType get_conversion_type (CollisionField field){
+
+            if (field == CollisionField::BOROUGH ){
+
+                return ConversionType::STRING;
+
+            }else if (field == CollisionField :: ZIP_CODE){
+
+                return ConversionType::INT32;
+            }else if( field == CollisionField :: LATITUDE){
+
+                return ConversionType::FLOAT;
+
+            }
+            return {};
+        }
+
+
+
+
 };
 
 
@@ -245,7 +284,7 @@ public:
 
         std::cout << "collison size" << collisions.size() << std::endl;
 
-        int counter= 100;
+        /*int counter= 100;
         for (auto proxy : collisions ){
             if (counter == 0){
                 break;
@@ -253,6 +292,11 @@ public:
             collision_proto::Collision* collision = response->add_collision();
             QueryWrapper::ConvertToProto(proxy, collision);
             counter--;
+        } */
+
+        for (auto proxy : collisions ){
+            collision_proto::Collision* collision = response->add_collision();
+            QueryWrapper::ConvertToProto(proxy, collision);
         }
 
         return grpc::Status::OK;
@@ -267,6 +311,8 @@ void RunServer(){
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.SetMaxSendMessageSize(500*1024*1024);
+    builder.SetMaxReceiveMessageSize(500*1024*1024);
     builder.RegisterService(&service);
 
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());

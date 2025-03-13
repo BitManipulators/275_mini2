@@ -4,7 +4,9 @@ package collision_proto;
 
 enum Condition {
     EQUALS = 0;
-    NOT_EQUALS = 1;
+    LESS_THAN = 1;
+    GREATER_THAN = 2;
+
 }
 
 enum QueryFields {
@@ -46,8 +48,9 @@ message QueryCondition {
     Condition condition = 2;
     oneof data {
 
-        string str_data = 3;
-        int32 int_data = 4;
+        string str_value = 3;
+        int32 int_value = 4;
+        float float_value = 5;
 
     }
 }
