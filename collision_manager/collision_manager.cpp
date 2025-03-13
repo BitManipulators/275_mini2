@@ -2,7 +2,7 @@
 
 #include "collision_parser.hpp"
 #include "query.hpp"
-
+#include <fstream>
 #include <cstring>
 #include <string>
 
@@ -12,7 +12,31 @@ CollisionManager::CollisionManager(const std::string& filename) {
     CollisionParser parser{filename};
 
     try {
-        Collisions collisions = parser.parse();
+        int totalRecords = parser.getTotalRecords();
+
+        int totalPartitions = 5;
+        if (const char *env_total = std::getenv("TOTAL_PARTITIONS"))
+        {
+            totalPartitions = std::atoi(env_total);
+        }
+
+        int rank = 0;
+        if (const char *env_rank = std::getenv("RANK"))
+        {
+            rank = std::atoi(env_rank);
+        }
+
+        int partitionSize = totalRecords / totalPartitions;
+        int start_index = rank * partitionSize;
+        int end_index = (rank == totalPartitions - 1) ? totalRecords : (start_index + partitionSize);
+
+        std::cout << "Process with rank " << rank
+                  << " will process records from " << start_index
+                  << " to " << end_index - 1 << std::endl;
+
+       // Collisions collisions = parser.parse();
+       Collisions collisions = parser.parsePartition(start_index, end_index);
+
         this->indexed_collisions_ = IndexedCollisions(collisions);
         this->initialization_error_ = "";
     } catch (const std::runtime_error& e) {

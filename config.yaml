@@ -1,5 +1,9 @@
 ---
 # Distributed System Configuration for gRPC Communication
+
+global:
+  total_partitions: 5
+
 deployment:
   name: "distributed-grpc-system"
   version: "1.0.0"
@@ -33,6 +37,7 @@ processes:
     environment:
       LOG_LEVEL: "INFO"
       DATA_DIR: "/opt/app/data/a"
+      RANK: 0
 
   process_b:
     name: "Process-B"
@@ -42,6 +47,7 @@ processes:
     environment:
       LOG_LEVEL: "INFO"
       DATA_DIR: "/opt/app/data/b"
+      RANK: 1
 
   process_c:
     name: "Process-C"
@@ -51,6 +57,7 @@ processes:
     environment:
       LOG_LEVEL: "INFO"
       DATA_DIR: "/opt/app/data/c"
+      RANK: 2
 
   process_d:
     name: "Process-D"
@@ -60,6 +67,7 @@ processes:
     environment:
       LOG_LEVEL: "INFO"
       DATA_DIR: "/opt/app/data/d"
+      RANK: 3
 
   process_e:
     name: "Process-E"
@@ -69,6 +77,7 @@ processes:
     environment:
       LOG_LEVEL: "INFO"
       DATA_DIR: "/opt/app/data/e"
+      RANK: 4
 
 # Communication overlay structure
 overlay:
@@ -113,14 +122,14 @@ overlay:
         max_message_size: 4194304
         keep_alive_timeout: 60
 
-# Deployment settings (Optional customization as needed)
+# Deployment settings
 deployment_settings:
   start_order:
-    - "process_e"
+    - "process_a"
+    - "process_b"
     - "process_c"
     - "process_d"
-    - "process_b"
-    - "process_a"
+    - "process_e"
 
   health_checks:
     interval: 30  # seconds

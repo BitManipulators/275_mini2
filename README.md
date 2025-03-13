@@ -49,3 +49,9 @@ ctest
 ```
 ./yaml_parser
 ```
+
+## 9. Run Process file
+```
+
+cmake --build . --target run_process_b
+```

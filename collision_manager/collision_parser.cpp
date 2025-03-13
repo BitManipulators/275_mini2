@@ -269,3 +269,64 @@ Collisions CollisionParser::parse() {
 
     return collisions;
 }
+
+Collisions CollisionParser::parsePartition(int start_index, int end_index) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file " + filename);
+    }
+
+    std::string line;
+    std::vector<std::string> lines;
+    bool is_first_line = true;
+
+    // Read all lines; skip the header
+    while (std::getline(file, line)) {
+        if (is_first_line) {
+            is_first_line = false;
+            continue;
+        }
+        lines.push_back(line);
+    }
+    file.close();
+
+    // Adjust indices if the file has fewer lines than expected.
+    if (end_index > static_cast<int>(lines.size()))
+        end_index = static_cast<int>(lines.size());
+
+    Collisions collisions{};
+
+    unsigned long num_threads = omp_get_max_threads();
+    std::vector<Collisions> thread_local_collisions(num_threads);
+
+    // Process only the lines that fall within [start_index, end_index)
+    #pragma omp parallel for schedule(static)
+    for (int i = start_index; i < end_index; i++) {
+        const std::string& line = lines[i];
+        int thread_id = omp_get_thread_num();
+        parseline(line, thread_local_collisions[thread_id]);
+    }
+
+    // Combine results from all threads
+    for (const auto& local_collisions : thread_local_collisions) {
+        collisions.combine(local_collisions);
+    }
+
+    return collisions;
+}
+
+int CollisionParser::getTotalRecords() {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file " + filename);
+    }
+
+    int totalRecords = 0;
+    std::string line;
+    while(std::getline(file, line)) {
+        totalRecords++;
+    }
+
+    file.close();
+    return totalRecords;
+}
