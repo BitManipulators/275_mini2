@@ -7,11 +7,14 @@
 void RunClient() {
 
     std::string target_str = "localhost:50051";
-    std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
+    grpc::ChannelArguments channel_args;
+    channel_args.SetMaxReceiveMessageSize(500 * 1024 * 1024);
+    //channel_args.SetMaxSendMessageSize(500 * 1024 * 1024);
+    std::shared_ptr<grpc::Channel> channel = grpc::CreateCustomChannel (target_str, grpc::InsecureChannelCredentials(),channel_args);
     std::unique_ptr<collision_proto::CollisionQueryService::Stub> stub = collision_proto::CollisionQueryService::NewStub(channel);
 
-    Query query = Query::create(CollisionField::BOROUGH, QueryType::EQUALS, "BROOKLYN")
-        .add(CollisionField::ZIP_CODE, QueryType::EQUALS, static_cast<uint32_t>(11208));
+    Query query = Query::create(CollisionField::BOROUGH, QueryType::EQUALS, "BROOKLYN");
+        //.add(CollisionField::ZIP_CODE, QueryType::EQUALS, static_cast<uint32_t>(11208));
 
     collision_proto::QueryRequest request = QueryProtoConverter::serialize(query);
 
