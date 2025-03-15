@@ -64,3 +64,5 @@ struct DeploymentConfig {
 DeploymentConfig parseConfig(const std::string& configFile);
 
 void displayConfig(const DeploymentConfig& config);
+
+std::vector<std::string> getPeerAddresses(const DeploymentConfig& config, const std::string& selfProcessId);
