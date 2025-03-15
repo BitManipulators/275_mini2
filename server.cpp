@@ -47,44 +47,7 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
 public:
     std::vector<std::string> peer_addresses_;
 
-    CollisionQueryServiceImpl(const std::vector<std::string>& peers) : peer_addresses_(peers) {}
-
-//     grpc::Status GetCollisions(grpc::ServerContext* context,
-//                            const collision_proto::QueryRequest* request,
-//                            collision_proto::QueryResponse* response) override {
-
-//     Query query = QueryProtoConverter::deserialize(request);
-//     std::vector<CollisionProxy*> localCollisions = collision_manager->searchOpenMp(query);
-
-//     std::vector<collision_proto::Collision> localResults;
-//     for (auto proxy : localCollisions) {
-//         collision_proto::Collision temp;
-//         CollisionProtoConverter::serialize(proxy, &temp);
-//         localResults.push_back(temp);
-//     }
-
-//     std::cout << "Local collision size: " << localResults.size() << std::endl;
-
-//     std::vector<collision_proto::Collision> aggregatedResults = localResults;
-
-//     const char* rankEnv = std::getenv("RANK");
-//     int rank = rankEnv ? std::stoi(rankEnv) : 0;
-//     if (rank == 0) {
-//         for (const auto &addr : peer_addresses_) {
-//             std::vector<collision_proto::Collision> peerCollisions = queryPeer(addr, *request);
-//             std::cout << "Received " << peerCollisions.size() << " collisions from peer " << addr << std::endl;
-//             aggregatedResults.insert(aggregatedResults.end(), peerCollisions.begin(), peerCollisions.end());
-//         }
-//         std::cout << "Aggregated collision size: " << aggregatedResults.size() << std::endl;
-//     }
-
-//     for (const auto &collision : aggregatedResults) {
-//         collision_proto::Collision* newcollision = response->add_collision();
-//         newcollision->CopyFrom(collision);
-//     }
-
-//     return grpc::Status::OK;
-// }
+CollisionQueryServiceImpl(const std::vector<std::string>& peers) : peer_addresses_(peers) {}
 
 grpc::Status GetCollisions(grpc::ServerContext* context,
                            const collision_proto::QueryRequest* request,
