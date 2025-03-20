@@ -13,6 +13,17 @@ const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_
 
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
+std::mutex queryMutex;
+std::unordered_set<std::string> processedQueries;
+
+// Compute a hash for the query using its DebugString
+std::string computeQueryHash(const collision_proto::QueryRequest& request) {
+    std::string queryStr = request.DebugString(); // Use DebugString to serialize the query
+    std::hash<std::string> hasher;
+    size_t hashValue = hasher(queryStr);
+    return std::to_string(hashValue);
+}
+
 std::vector<collision_proto::Collision> queryPeer(const std::string peer_address, const collision_proto::QueryRequest &request)
 {
     std::vector<collision_proto::Collision> peerCollisions;
@@ -52,6 +63,25 @@ CollisionQueryServiceImpl(const std::vector<std::string>& peers) : peer_addresse
 grpc::Status GetCollisions(grpc::ServerContext* context,
                            const collision_proto::QueryRequest* request,
                            collision_proto::QueryResponse* response) override {
+
+    // Get the rank of the current process.
+    const char* rankEnv = std::getenv("RANK");
+    int rank = rankEnv ? std::stoi(rankEnv) : 0;
+
+    // For Process E (rank 4), check for duplicate queries.
+    if (rank == 4) {
+        std::string queryHash = computeQueryHash(*request);
+        {
+            std::lock_guard<std::mutex> lock(queryMutex);
+            if (processedQueries.find(queryHash) != processedQueries.end()) {
+                std::cerr << "Duplicate query detected in Process E (hash: " << queryHash << "). Rejecting query." << std::endl;
+                return grpc::Status(grpc::StatusCode::ALREADY_EXISTS, "Query already processed");
+            }
+            // Mark query as processed.
+            processedQueries.insert(queryHash);
+        }
+    }
+
     // Run the local query.
     Query query = QueryProtoConverter::deserialize(request);
     std::vector<CollisionProxy*> localResults = collision_manager->searchOpenMp(query);
@@ -62,10 +92,6 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
         CollisionProtoConverter::serialize(proxy, &temp);
         aggregatedResults.push_back(temp);
     }
-
-    // Determine process identity
-    const char* rankEnv = std::getenv("RANK");
-    int rank = rankEnv ? std::stoi(rankEnv) : 0;
 
     // Query based on overlay:
     if (rank == 0) {
