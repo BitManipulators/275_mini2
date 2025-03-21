@@ -137,6 +137,7 @@ foreach(_target
   )
   add_executable(${_target} "${_target}.cpp")
   target_link_libraries(${_target}
+    yaml_parser
     absl::check
     absl::flags
     absl::flags_parse

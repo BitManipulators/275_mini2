@@ -181,17 +181,19 @@ void displayConfig(const DeploymentConfig& config) {
     }
 }
 
-int main() {
-    std::string configFile = "../config.yaml";
-
-    DeploymentConfig config = parseConfig(configFile);
-    displayConfig(config);
-
-    if (!config.processes.empty()) {
-        auto& processA = config.processes["process_a"];
-        std::cout << "\nProcess A executable: " << processA.executable << std::endl;
-        std::cout << "Process A runs on: " << config.machines[processA.machine].hostname << std::endl;
+std::vector<std::string> getPeerAddresses(const DeploymentConfig& config, const std::string& selfProcessId) {
+    std::vector<std::string> peerAddresses;
+    for (const auto &process : config.processes) {
+        const std::string &processId = process.first;
+        if (processId == selfProcessId) continue;
+        const ProcessConfig &procConfig = process.second;
+        auto machIt = config.machines.find(procConfig.machine);
+        if(machIt != config.machines.end()) {
+            std::string address = machIt->second.ip + ":" + std::to_string(procConfig.port);
+            peerAddresses.push_back(address);
+        } else {
+            std::cerr << "Machine " << procConfig.machine << " not found in config." << std::endl;
+        }
     }
-
-    return 0;
+    return peerAddresses;
 }

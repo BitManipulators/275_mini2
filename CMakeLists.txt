@@ -60,7 +60,7 @@ enable_testing()
 
 include(GoogleTest)
 
-add_executable(yaml_parser yaml_parser.cpp)
+# add_executable(yaml_parser yaml_parser.cpp)
 
 FetchContent_Declare(
   yaml-cpp
@@ -69,37 +69,41 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
+add_library(yaml_parser yaml_parser.cpp)
 target_link_libraries(yaml_parser yaml-cpp)
 
+# add_executable(collision_server server.cpp)
+# target_link_libraries(collision_server yaml_parser)
+
 add_custom_target(run_process_a
-  COMMAND env RANK=0 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
-  DEPENDS main
+  # COMMAND env RANK=0 SELF_PROCESS_ID=process_a TOTAL_PARTITIONS=5 $<TARGET_FILE:server>
+  DEPENDS server
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # Custom target to run Process-B with environment variables set
 add_custom_target(run_process_b
-  COMMAND env RANK=1 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
-  DEPENDS main
+  # COMMAND env RANK=1 SELF_PROCESS_ID=process_b TOTAL_PARTITIONS=5 $<TARGET_FILE:server>
+  DEPENDS server
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 add_custom_target(run_process_c
-  COMMAND env RANK=2 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
-  DEPENDS main
+  # COMMAND env RANK=2 SELF_PROCESS_ID=process_c TOTAL_PARTITIONS=5 $<TARGET_FILE:server>
+  DEPENDS server
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # Custom target to run Process-B with environment variables set
 add_custom_target(run_process_d
-  COMMAND env RANK=3 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
-  DEPENDS main
+  # COMMAND env RANK=3 SELF_PROCESS_ID=process_d TOTAL_PARTITIONS=5 $<TARGET_FILE:server>
+  DEPENDS server
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 add_custom_target(run_process_e
-  COMMAND env RANK=4 TOTAL_PARTITIONS=5 $<TARGET_FILE:main> ../Motor_Vehicle_Collisions_-_Crashes_20250123.csv
-  DEPENDS main
+  # COMMAND env RANK=4 SELF_PROCESS_ID=process_e TOTAL_PARTITIONS=5 $<TARGET_FILE:server>
+  DEPENDS server
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 

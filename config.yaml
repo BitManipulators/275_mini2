@@ -13,7 +13,7 @@ deployment:
 machines:
   computer1:
     hostname: "computer1.example.com"
-    ip: "192.168.0.22"
+    ip: "127.0.0.1"
     resources:
       cpu: 4
       memory: "8Gi"
@@ -51,7 +51,7 @@ processes:
 
   process_c:
     name: "Process-C"
-    machine: "computer2"
+    machine: "computer1"
     executable: "/opt/app/process-c"
     port: 50053
     environment:
@@ -61,7 +61,7 @@ processes:
 
   process_d:
     name: "Process-D"
-    machine: "computer2"
+    machine: "computer1"
     executable: "/opt/app/process-d"
     port: 50054
     environment:
@@ -71,7 +71,7 @@ processes:
 
   process_e:
     name: "Process-E"
-    machine: "computer2"
+    machine: "computer1"
     executable: "/opt/app/process-e"
     port: 50055
     environment:
