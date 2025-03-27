@@ -583,3 +583,37 @@ void Collisions::combine(const Collisions& other) {
 std::size_t Collisions::size() {
     return size_;
 }
+
+Collision collision_proxy_to_collision(const CollisionProxy& proxy) {
+    Collision collision{};
+    collision.crash_date = *proxy.crash_date;
+    collision.crash_time = *proxy.crash_time;
+    collision.borough = *proxy.borough;
+    collision.zip_code = *proxy.zip_code;
+    collision.latitude = *proxy.latitude;
+    collision.longitude = *proxy.longitude;
+    collision.location = *proxy.location;
+    collision.on_street_name = *proxy.on_street_name;
+    collision.cross_street_name = *proxy.cross_street_name;
+    collision.off_street_name = *proxy.off_street_name;
+    collision.number_of_persons_injured = *proxy.number_of_persons_injured;
+    collision.number_of_persons_killed = *proxy.number_of_persons_killed;
+    collision.number_of_pedestrians_injured = *proxy.number_of_pedestrians_injured;
+    collision.number_of_pedestrians_killed = *proxy.number_of_pedestrians_killed;
+    collision.number_of_cyclist_injured = *proxy.number_of_cyclist_injured;
+    collision.number_of_cyclist_killed = *proxy.number_of_cyclist_killed;
+    collision.number_of_motorist_injured = *proxy.number_of_motorist_injured;
+    collision.number_of_motorist_killed = *proxy.number_of_motorist_killed;
+    collision.contributing_factor_vehicle_1 = *proxy.contributing_factor_vehicle_1;
+    collision.contributing_factor_vehicle_2 = *proxy.contributing_factor_vehicle_2;
+    collision.contributing_factor_vehicle_3 = *proxy.contributing_factor_vehicle_3;
+    collision.contributing_factor_vehicle_4 = *proxy.contributing_factor_vehicle_4;
+    collision.contributing_factor_vehicle_5 = *proxy.contributing_factor_vehicle_5;
+    collision.collision_id = *proxy.collision_id;
+    collision.vehicle_type_code_1 = *proxy.vehicle_type_code_1;
+    collision.vehicle_type_code_2 = *proxy.vehicle_type_code_2;
+    collision.vehicle_type_code_3 = *proxy.vehicle_type_code_3;
+    collision.vehicle_type_code_4 = *proxy.vehicle_type_code_4;
+    collision.vehicle_type_code_5 = *proxy.vehicle_type_code_5;
+    return collision;
+}

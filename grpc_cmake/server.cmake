@@ -131,9 +131,19 @@ target_link_libraries(
     cm_grpc_proto
 )
 
+add_library(
+    collision_query_service_impl
+    collision_query_service_impl.cpp
+)
+target_link_libraries(
+    collision_query_service_impl
+    collision_proto_converters
+    cm_grpc_proto
+)
+
 # Targets greeter_[async_](client|server)
 foreach(_target
-  server client
+  async_server sync_server client
   )
   add_executable(${_target} "${_target}.cpp")
   target_link_libraries(${_target}
@@ -143,6 +153,7 @@ foreach(_target
     absl::flags_parse
     absl::log
     collision_proto_converters
+    collision_query_service_impl
     collision_manager
     ${_REFLECTION}
     ${_GRPC_GRPCPP}

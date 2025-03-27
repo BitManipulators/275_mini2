@@ -24,7 +24,7 @@ std::string computeQueryHash(const collision_proto::QueryRequest& request) {
     return std::to_string(hashValue);
 }
 
-std::vector<collision_proto::Collision> queryPeer(const std::string peer_address, const collision_proto::QueryRequest &request)
+QueryResponse queryPeer(const std::string peer_address, const collision_proto::QueryRequest &request)
 {
     std::vector<collision_proto::Collision> peerCollisions;
     std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(peer_address, grpc::InsecureChannelCredentials());
@@ -41,11 +41,8 @@ std::vector<collision_proto::Collision> queryPeer(const std::string peer_address
 
     if (status.ok())
     {
-        for (const auto &collision : peerResponse.collision())
-        {
-            peerCollisions.push_back(collision);
-        }
-        return peerCollisions;
+        QueryResponse query_response = CollisionProtoConverter::deserialize(peerResponse);
+        return query_response;
     }
     else
     {
@@ -83,43 +80,39 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
     }
 
     // Run the local query.
-    Query query = QueryProtoConverter::deserialize(request);
-    std::vector<CollisionProxy*> localResults = collision_manager->searchOpenMp(query);
+    QueryRequest query_request = QueryProtoConverter::deserialize(*request);
+    std::vector<Collision> localResults = collision_manager->search(query_request.query);
 
-    std::vector<collision_proto::Collision> aggregatedResults;
-    for (auto proxy : localResults) {
-        collision_proto::Collision temp;
-        CollisionProtoConverter::serialize(proxy, &temp);
-        aggregatedResults.push_back(temp);
-    }
+    std::vector<Collision> aggregatedResults{};
+    aggregatedResults.insert(aggregatedResults.end(), localResults.begin(), localResults.end());
 
     // Query based on overlay:
     if (rank == 0) {
         // Process A: query only Process B.
-        std::vector<collision_proto::Collision> resultsB = queryPeer("127.0.0.1:50052", *request);
-        aggregatedResults.insert(aggregatedResults.end(), resultsB.begin(), resultsB.end());
-        std::cout << "Results from B: " << resultsB.size() << std::endl;
+        QueryResponse resultsB = queryPeer("127.0.0.1:50052", *request);
+        aggregatedResults.insert(aggregatedResults.end(), resultsB.collisions.begin(), resultsB.collisions.end());
+        std::cout << "Results from B: " << resultsB.collisions.size() << std::endl;
     }
     else if (rank == 1) {
         // Process B: query Processes C and D.
-        std::vector<collision_proto::Collision> resultsC = queryPeer("127.0.0.1:50053", *request);
-        std::vector<collision_proto::Collision> resultsD = queryPeer("127.0.0.1:50054", *request);
-        aggregatedResults.insert(aggregatedResults.end(), resultsC.begin(), resultsC.end());
-        aggregatedResults.insert(aggregatedResults.end(), resultsD.begin(), resultsD.end());
-        std::cout << "Results from C: " << resultsC.size() << std::endl;
-        std::cout << "Results from D: " << resultsD.size() << std::endl;
+        QueryResponse resultsC = queryPeer("127.0.0.1:50053", *request);
+        QueryResponse resultsD = queryPeer("127.0.0.1:50054", *request);
+        aggregatedResults.insert(aggregatedResults.end(), resultsC.collisions.begin(), resultsC.collisions.end());
+        aggregatedResults.insert(aggregatedResults.end(), resultsD.collisions.begin(), resultsD.collisions.end());
+        std::cout << "Results from C: " << resultsC.collisions.size() << std::endl;
+        std::cout << "Results from D: " << resultsD.collisions.size() << std::endl;
     }
     else if (rank == 2) {
         // Process C: query Process E.
-        std::vector<collision_proto::Collision> resultsE = queryPeer("127.0.0.1:50055", *request);
-        aggregatedResults.insert(aggregatedResults.end(), resultsE.begin(), resultsE.end());
-        std::cout << "Results from E: " << resultsE.size() << std::endl;
+        QueryResponse resultsE = queryPeer("127.0.0.1:50055", *request);
+        aggregatedResults.insert(aggregatedResults.end(), resultsE.collisions.begin(), resultsE.collisions.end());
+        std::cout << "Results from E: " << resultsE.collisions.size() << std::endl;
     }
     else if (rank == 3) {
         // Process D: query Process E.
-        std::vector<collision_proto::Collision> resultsE = queryPeer("127.0.0.1:50055", *request);
-        aggregatedResults.insert(aggregatedResults.end(), resultsE.begin(), resultsE.end());
-        std::cout << "Results from E: " << resultsE.size() << std::endl;
+        QueryResponse resultsE = queryPeer("127.0.0.1:50055", *request);
+        aggregatedResults.insert(aggregatedResults.end(), resultsE.collisions.begin(), resultsE.collisions.end());
+        std::cout << "Results from E: " << resultsE.collisions.size() << std::endl;
     }
     // Process E (rank 4) does not forward the query further.
 
@@ -129,10 +122,14 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
     }
 
     // Build final response.
-    for (const auto &collision : aggregatedResults) {
-        collision_proto::Collision* newcollision = response->add_collision();
-        newcollision->CopyFrom(collision);
-    }
+    QueryResponse query_response = {
+        .id = query_request.id,
+        .requested_by = {},
+        .results_from = static_cast<std::uint32_t>(rank),
+        .collisions = aggregatedResults,
+    };
+
+    CollisionProtoConverter::serialize(query_response, *response);
 
     return grpc::Status::OK;
 }

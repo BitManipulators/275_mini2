@@ -151,4 +151,5 @@ private:
     const CollisionProxy index_to_collision(const std::size_t index);
 };
 
+Collision collision_proxy_to_collision(const CollisionProxy& proxy);
 std::ostream& operator<<(std::ostream& os, const CollisionProxy& collision);

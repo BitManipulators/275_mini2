@@ -127,11 +127,10 @@ collision_proto::QueryType to_proto_query_type(const QueryType& query_type) {
     }
 }
 
-Query QueryProtoConverter::deserialize(const collision_proto::QueryRequest* request) {
+QueryRequest QueryProtoConverter::deserialize(const collision_proto::QueryRequest& proto_query_request) {
     std::vector<Query> queries;
-    std::cout << "Request query size - " << request->queries().size() << std::endl;
 
-    for (const auto& proto_query : request->queries()) {
+    for (const auto& proto_query : proto_query_request.queries()) {
         CollisionField field = from_proto_query_field(proto_query.field());
         Value value = from_proto_query_value(proto_query, field);
         QueryType type = from_proto_query_type(proto_query.type());
@@ -149,13 +148,28 @@ Query QueryProtoConverter::deserialize(const collision_proto::QueryRequest* requ
         queries.push_back(Query::create(field, not_, type, value, case_insensitive));
     }
 
-    std::cout << "vector query size - " << queries.size() << std::endl;
-
     Query& query = queries.at(0);
     for (auto it = queries.begin() + 1; it < queries.end(); ++it) {
         query.add(*it);
     }
-    return query;
+
+    std::size_t id = 0;
+    if (proto_query_request.id()) {
+        id = proto_query_request.id();
+    }
+
+    std::vector<std::uint32_t> requested_by;
+    for (int i = 0; i < proto_query_request.requested_by_size(); ++i) {
+        requested_by.push_back(proto_query_request.requested_by(i));
+    }
+
+    QueryRequest query_request {
+        .id = id,
+        .requested_by = requested_by,
+        .query = query,
+    };
+
+    return query_request;
 }
 
 void serialize_proto_data(collision_proto::QueryCondition* condition, const FieldQuery& field_query) {
@@ -180,14 +194,14 @@ void serialize_proto_data(collision_proto::QueryCondition* condition, const Fiel
     }, field_query.get_value());
 }
 
-collision_proto::QueryRequest QueryProtoConverter::serialize(const Query& query) {
-    collision_proto::QueryRequest request;
+collision_proto::QueryRequest QueryProtoConverter::serialize(const QueryRequest& query_request) {
+    collision_proto::QueryRequest proto_query_request;
 
-    for (auto& field_query : query.get()) {
+    for (auto& field_query : query_request.query.get()) {
         collision_proto::QueryFields field = to_proto_query_field(field_query.get_name());
         collision_proto::QueryType type = to_proto_query_type(field_query.get_type());
 
-        collision_proto::QueryCondition* condition  = request.add_queries();
+        collision_proto::QueryCondition* condition  = proto_query_request.add_queries();
         condition->set_field(field);
         condition->set_type(type);
 
@@ -202,5 +216,11 @@ collision_proto::QueryRequest QueryProtoConverter::serialize(const Query& query)
         }
     }
 
-    return request;
+    proto_query_request.set_id(query_request.id);
+
+    for (const uint32_t req_by : query_request.requested_by) {
+        proto_query_request.add_requested_by(req_by);
+    }
+
+    return proto_query_request;
 }
