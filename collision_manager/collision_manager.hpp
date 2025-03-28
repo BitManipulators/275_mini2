@@ -13,6 +13,7 @@ public:
 
     bool is_initialized();
     const std::string& get_initialization_error();
+    const std::vector<Collision> search(const Query& query);
     const std::vector<CollisionProxy*> searchOpenMp(const Query& query);
 
     friend class CollisionManagerTest;

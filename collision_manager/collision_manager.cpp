@@ -64,6 +64,16 @@ const std::string& CollisionManager::get_initialization_error() {
     return this->initialization_error_;
 }
 
+const std::vector<Collision> CollisionManager::search(const Query& query) {
+    const std::vector<CollisionProxy*> collision_proxy_results = searchOpenMp(query);
+
+    std::vector<Collision> collision_results{};
+    for (CollisionProxy* proxy : collision_proxy_results) {
+        collision_results.push_back(collision_proxy_to_collision(*proxy));
+    }
+    return collision_results;
+}
+
 const std::vector<CollisionProxy*> CollisionManager::searchOpenMp(const Query& query) {
     const std::vector<FieldQuery>& field_queries = query.get();
     std::vector<CollisionProxy*> results;

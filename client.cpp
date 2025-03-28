@@ -1,8 +1,10 @@
+#include "collision_proto_converter.hpp"
 #include "query_proto_converter.hpp"
 
 #include <grpcpp/grpcpp.h>
 #include <iostream>
 
+using google::protobuf::Empty;
 
 void RunClient() {
 
@@ -13,17 +15,26 @@ void RunClient() {
     Query query = Query::create(CollisionField::BOROUGH, QueryType::EQUALS, "BROOKLYN")
         .add(CollisionField::ZIP_CODE, QueryType::EQUALS, static_cast<uint32_t>(11233));
 
-    collision_proto::QueryRequest request = QueryProtoConverter::serialize(query);
+    QueryRequest query_request = {
+        .id = 1,
+        .requested_by = {std::numeric_limits<std::uint32_t>::max()},
+        .query = query,
+    };
+
+    collision_proto::QueryRequest request = QueryProtoConverter::serialize(query_request);
 
     collision_proto::QueryResponse response;
     grpc::ClientContext context;
 
     grpc::Status status = stub->GetCollisions(&context, request, &response);
 
+    std::cout << "Sent query" << std::endl;
+
     if (status.ok()) {
+
         std::cout << "Collision size "<< response.collision_size() << std::endl;
 
-        for (const collision_proto::Collision& collision  : response.collision()){
+        for (const collision_proto::Collision& collision  : response.collision()) {
 
             std::cout << "Name : " << collision.borough() << " Zip_code : " << collision.zip_code() << std::endl;
         }

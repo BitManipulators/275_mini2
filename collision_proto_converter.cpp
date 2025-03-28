@@ -2,151 +2,225 @@
 
 #include <iostream>
 
-Collision CollisionProtoConverter::deserialize(const collision_proto::Collision* collision_proto) {
-    Collision collision{};
+QueryResponse CollisionProtoConverter::deserialize(const collision_proto::QueryResponse& response) {
+    std::vector<Collision> collisions{};
 
-    // TODO
+    for (int i = 0; i < response.collision_size(); ++i) {
+        const collision_proto::Collision& collision_proto = response.collision(i);
+        Collision collision{};
 
-    return collision;
+        if (collision_proto.has_crash_date()) {
+            collision.crash_date = collision_parser_converters::convert_year_month_day_date(collision_proto.crash_date());
+        }
+        if (collision_proto.has_crash_time()) {
+            collision.crash_time = collision_parser_converters::convert_hour_minute_time(collision_proto.crash_time());
+        }
+        if (collision_proto.has_borough()) {
+            collision.borough = collision_proto.borough();
+        }
+        if (collision_proto.has_zip_code()) {
+            collision.zip_code = collision_proto.zip_code();
+        }
+        if (collision_proto.has_latitude()) {
+            collision.latitude = collision_proto.latitude();
+        }
+        if (collision_proto.has_longitude()) {
+            collision.longitude = collision_proto.longitude();
+        }
+        if (collision_proto.has_location()) {
+            collision.location = collision_proto.location();
+        }
+        if (collision_proto.has_on_street_name()) {
+            collision.on_street_name = collision_proto.on_street_name();
+        }
+        if (collision_proto.has_cross_street_name()) {
+            collision.cross_street_name = collision_proto.cross_street_name();
+        }
+        if (collision_proto.has_off_street_name()) {
+            collision.off_street_name = collision_proto.off_street_name();
+        }
+        if (collision_proto.has_number_of_persons_injured()) {
+            collision.number_of_persons_injured = collision_proto.number_of_persons_injured();
+        }
+        if (collision_proto.has_number_of_persons_killed()) {
+            collision.number_of_persons_killed = collision_proto.number_of_persons_killed();
+        }
+        if (collision_proto.has_number_of_pedestrians_injured()) {
+            collision.number_of_pedestrians_injured = collision_proto.number_of_pedestrians_injured();
+        }
+        if (collision_proto.has_number_of_pedestrians_killed()) {
+            collision.number_of_pedestrians_killed = collision_proto.number_of_pedestrians_killed();
+        }
+        if (collision_proto.has_number_of_cyclist_injured()) {
+            collision.number_of_cyclist_injured = collision_proto.number_of_cyclist_injured();
+        }
+        if (collision_proto.has_number_of_cyclist_killed()) {
+            collision.number_of_cyclist_killed = collision_proto.number_of_cyclist_killed();
+        }
+        if (collision_proto.has_number_of_motorist_injured()) {
+            collision.number_of_motorist_injured = collision_proto.number_of_motorist_injured();
+        }
+        if (collision_proto.has_number_of_motorist_killed()) {
+            collision.number_of_motorist_killed = collision_proto.number_of_motorist_killed();
+        }
+        if (collision_proto.has_contributing_factor_vehicle_1()) {
+            collision.contributing_factor_vehicle_1 = collision_proto.contributing_factor_vehicle_1();
+        }
+        if (collision_proto.has_contributing_factor_vehicle_2()) {
+            collision.contributing_factor_vehicle_2 = collision_proto.contributing_factor_vehicle_2();
+        }
+        if (collision_proto.has_contributing_factor_vehicle_3()) {
+            collision.contributing_factor_vehicle_3 = collision_proto.contributing_factor_vehicle_3();
+        }
+        if (collision_proto.has_contributing_factor_vehicle_4()) {
+            collision.contributing_factor_vehicle_4 = collision_proto.contributing_factor_vehicle_4();
+        }
+        if (collision_proto.has_contributing_factor_vehicle_5()) {
+            collision.contributing_factor_vehicle_5 = collision_proto.contributing_factor_vehicle_5();
+        }
+        if (collision_proto.has_collision_id()) {
+            collision.collision_id = collision_proto.collision_id();
+        }
+        if (collision_proto.has_vehicle_type_code_1()) {
+            collision.vehicle_type_code_1 = collision_proto.vehicle_type_code_1();
+        }
+        if (collision_proto.has_vehicle_type_code_2()) {
+            collision.vehicle_type_code_2 = collision_proto.vehicle_type_code_2();
+        }
+        if (collision_proto.has_vehicle_type_code_3()) {
+            collision.vehicle_type_code_3 = collision_proto.vehicle_type_code_3();
+        }
+        if (collision_proto.has_vehicle_type_code_4()) {
+            collision.vehicle_type_code_4 = collision_proto.vehicle_type_code_4();
+        }
+        if (collision_proto.has_vehicle_type_code_5()) {
+            collision.vehicle_type_code_5 = collision_proto.vehicle_type_code_5();
+        }
+        collisions.push_back(collision);
+    }
+
+    std::vector<std::uint32_t> requested_by;
+    for (int i = 0; i < response.requested_by_size(); ++i) {
+        requested_by.push_back(response.requested_by(i));
+    }
+
+    QueryResponse query_response = {
+        .id = response.id(),
+        .requested_by = requested_by,
+        .results_from = response.results_from(),
+        .collisions = collisions,
+    };
+
+    return query_response;
 }
 
-collision_proto::Collision CollisionProtoConverter::serialize(const Collision& collision) {
-    collision_proto::Collision proto;
+collision_proto::QueryResponse CollisionProtoConverter::serialize(const QueryResponse& query_response) {
+    collision_proto::QueryResponse proto_query_response;
 
-    // TODO
+    serialize(query_response, proto_query_response);
 
-    return proto;
+    return proto_query_response;
 }
 
-void CollisionProtoConverter::serialize(const CollisionProxy* data_struct, collision_proto::Collision* proto_data) {
+void CollisionProtoConverter::serialize(const QueryResponse& query_response, collision_proto::QueryResponse& proto_query_response) {
+    proto_query_response.set_id(query_response.id);
+    proto_query_response.set_results_from(query_response.results_from);
 
-   // Convert crash date (assuming it's in the form std::chrono::year_month_day)
+    for (const uint32_t req_by : query_response.requested_by) {
+        proto_query_response.add_requested_by(req_by);
+    }
 
-            /*
-            if (data_struct->crash_date != std::chrono::year_month_day{}) {  // Check if the date is set
-                std::ostringstream date_stream;
-                date_stream << std::chrono::year(data_struct->crash_date) << "-"
-                            << std::chrono::month(data_struct->crash_date) << "-"
-                            << std::chrono::day(data_struct->crash_date);
-                proto_data->set_crash_date(date_stream.str());
-            }
+    for (const Collision& collision : query_response.collisions) {
+        collision_proto::Collision* proto_collision = proto_query_response.add_collision();
 
-            // Convert crash time (assuming it's in std::chrono::hh_mm_ss)
-            if (data_struct->crash_time != std::chrono::hh_mm_ss<std::chrono::minutes>{}) {  // Check if the time is set
-                std::ostringstream time_stream;
-                time_stream << std::chrono::hours(data_struct->crash_time) << ":"
-                            << std::chrono::minutes(data_struct->crash_time) << ":"
-                            << std::chrono::seconds(data_struct->crash_time);
-                proto_data->set_crash_time(time_stream.str());
-            }*/
-
-            // Convert optional fields using has_value() for std::optional
-
-            if (data_struct->borough && data_struct->borough->has_value()) {
-                proto_data->set_borough(data_struct->borough->value());
-            }
-
-            if (data_struct->zip_code && data_struct->zip_code->has_value()) {
-                proto_data->set_zip_code(data_struct->zip_code->value());
-            }
-
-            if (data_struct->latitude && data_struct->latitude->has_value()) {
-                proto_data->set_latitude(data_struct->latitude->value());
-            }
-
-            if (data_struct->longitude && data_struct->longitude->has_value()) {
-                proto_data->set_longitude(data_struct->longitude->value());
-            }
-
-            if (data_struct->location && data_struct->location->has_value()) {
-                proto_data->set_location(data_struct->location->value());
-            }
-
-            if (data_struct->on_street_name && data_struct->on_street_name->has_value()) {
-                proto_data->set_on_street_name(data_struct->on_street_name->value());
-            }
-
-            if (data_struct->cross_street_name && data_struct->cross_street_name->has_value()) {
-                proto_data->set_cross_street_name(data_struct->cross_street_name->value());
-            }
-
-            if (data_struct->off_street_name && data_struct->off_street_name->has_value()) {
-                proto_data->set_off_street_name(data_struct->off_street_name->value());
-            }
-
-            if (data_struct->number_of_persons_injured && data_struct->number_of_persons_injured->has_value()) {
-                proto_data->set_number_of_persons_injured(data_struct->number_of_persons_injured->value());
-            }
-
-            if (data_struct->number_of_persons_killed && data_struct->number_of_persons_killed->has_value()) {
-                proto_data->set_number_of_persons_killed(data_struct->number_of_persons_killed->value());
-            }
-
-            if (data_struct->number_of_pedestrians_injured && data_struct->number_of_pedestrians_injured->has_value()) {
-                proto_data->set_number_of_pedestrians_injured(data_struct->number_of_pedestrians_injured->value());
-            }
-
-            if (data_struct->number_of_pedestrians_killed && data_struct->number_of_pedestrians_killed->has_value()) {
-                proto_data->set_number_of_pedestrians_killed(data_struct->number_of_pedestrians_killed->value());
-            }
-
-            if (data_struct->number_of_cyclist_injured && data_struct->number_of_cyclist_injured->has_value()) {
-                proto_data->set_number_of_cyclist_injured(data_struct->number_of_cyclist_injured->value());
-            }
-
-            if (data_struct->number_of_cyclist_killed && data_struct->number_of_cyclist_killed->has_value()) {
-                proto_data->set_number_of_cyclist_killed(data_struct->number_of_cyclist_killed->value());
-            }
-
-            if (data_struct->number_of_motorist_injured && data_struct->number_of_motorist_injured->has_value()) {
-                proto_data->set_number_of_motorist_injured(data_struct->number_of_motorist_injured->value());
-            }
-
-            if (data_struct->number_of_motorist_killed && data_struct->number_of_motorist_killed->has_value()) {
-                proto_data->set_number_of_motorist_killed(data_struct->number_of_motorist_killed->value());
-            }
-
-            if (data_struct->contributing_factor_vehicle_1 && data_struct->contributing_factor_vehicle_1->has_value()) {
-                proto_data->set_contributing_factor_vehicle_1(data_struct->contributing_factor_vehicle_1->value());
-            }
-
-            if (data_struct->contributing_factor_vehicle_2 && data_struct->contributing_factor_vehicle_2->has_value()) {
-                proto_data->set_contributing_factor_vehicle_2(data_struct->contributing_factor_vehicle_2->value());
-            }
-
-            if (data_struct->contributing_factor_vehicle_3 && data_struct->contributing_factor_vehicle_3->has_value()) {
-                proto_data->set_contributing_factor_vehicle_3(data_struct->contributing_factor_vehicle_3->value());
-            }
-
-            if (data_struct->contributing_factor_vehicle_4 && data_struct->contributing_factor_vehicle_4->has_value()) {
-                proto_data->set_contributing_factor_vehicle_4(data_struct->contributing_factor_vehicle_4->value());
-            }
-
-            if (data_struct->contributing_factor_vehicle_5 && data_struct->contributing_factor_vehicle_5->has_value()) {
-                proto_data->set_contributing_factor_vehicle_5(data_struct->contributing_factor_vehicle_5->value());
-            }
-
-            if (data_struct->collision_id && data_struct->collision_id->has_value()) {
-                proto_data->set_collision_id(data_struct->collision_id->value());
-            }
-
-            if (data_struct->vehicle_type_code_1 && data_struct->vehicle_type_code_1->has_value()) {
-                proto_data->set_vehicle_type_code_1(data_struct->vehicle_type_code_1->value());
-            }
-
-            if (data_struct->vehicle_type_code_2 && data_struct->vehicle_type_code_2->has_value()) {
-                proto_data->set_vehicle_type_code_2(data_struct->vehicle_type_code_2->value());
-            }
-
-            if (data_struct->vehicle_type_code_3 && data_struct->vehicle_type_code_3->has_value()) {
-                proto_data->set_vehicle_type_code_3(data_struct->vehicle_type_code_3->value());
-            }
-
-            if (data_struct->vehicle_type_code_4 && data_struct->vehicle_type_code_4->has_value()) {
-                proto_data->set_vehicle_type_code_4(data_struct->vehicle_type_code_4->value());
-            }
-
-            if (data_struct->vehicle_type_code_5 && data_struct->vehicle_type_code_5->has_value()) {
-                proto_data->set_vehicle_type_code_5(data_struct->vehicle_type_code_5->value());
-            }
+        if (collision.crash_date.has_value()) {
+            std::chrono::year_month_day ymd = collision.crash_date.value();
+            proto_collision->set_crash_date(std::format("{:02}/{:02}/{:04}", (unsigned)ymd.month(), (unsigned)ymd.day(), (int)ymd.year()));
+        }
+        if (collision.crash_time.has_value()) {
+            std::chrono::hh_mm_ss<std::chrono::minutes> time = collision.crash_time.value();
+            proto_collision->set_crash_time(std::format("{:02}:{:02}", (int)time.hours().count(), (int)time.minutes().count()));
+        }
+        if (collision.borough.has_value()) {
+            proto_collision->set_borough(collision.borough.value());
+        }
+        if (collision.zip_code.has_value()) {
+            proto_collision->set_zip_code(collision.zip_code.value());
+        }
+        if (collision.latitude.has_value()) {
+            proto_collision->set_latitude(collision.latitude.value());
+        }
+        if (collision.longitude.has_value()) {
+            proto_collision->set_longitude(collision.longitude.value());
+        }
+        if (collision.location.has_value()) {
+            proto_collision->set_location(collision.location.value());
+        }
+        if (collision.on_street_name.has_value()) {
+            proto_collision->set_on_street_name(collision.on_street_name.value());
+        }
+        if (collision.cross_street_name.has_value()) {
+            proto_collision->set_cross_street_name(collision.cross_street_name.value());
+        }
+        if (collision.off_street_name.has_value()) {
+            proto_collision->set_off_street_name(collision.off_street_name.value());
+        }
+        if (collision.number_of_persons_injured.has_value()) {
+            proto_collision->set_number_of_persons_injured(collision.number_of_persons_injured.value());
+        }
+        if (collision.number_of_persons_killed.has_value()) {
+            proto_collision->set_number_of_persons_killed(collision.number_of_persons_killed.value());
+        }
+        if (collision.number_of_pedestrians_injured.has_value()) {
+            proto_collision->set_number_of_pedestrians_injured(collision.number_of_pedestrians_injured.value());
+        }
+        if (collision.number_of_pedestrians_killed.has_value()) {
+            proto_collision->set_number_of_pedestrians_killed(collision.number_of_pedestrians_killed.value());
+        }
+        if (collision.number_of_cyclist_injured.has_value()) {
+            proto_collision->set_number_of_cyclist_injured(collision.number_of_cyclist_injured.value());
+        }
+        if (collision.number_of_cyclist_killed.has_value()) {
+            proto_collision->set_number_of_cyclist_killed(collision.number_of_cyclist_killed.value());
+        }
+        if (collision.number_of_motorist_injured.has_value()) {
+            proto_collision->set_number_of_motorist_injured(collision.number_of_motorist_injured.value());
+        }
+        if (collision.number_of_motorist_killed.has_value()) {
+            proto_collision->set_number_of_motorist_killed(collision.number_of_motorist_killed.value());
+        }
+        if (collision.contributing_factor_vehicle_1.has_value()) {
+            proto_collision->set_contributing_factor_vehicle_1(collision.contributing_factor_vehicle_1.value());
+        }
+        if (collision.contributing_factor_vehicle_2.has_value()) {
+            proto_collision->set_contributing_factor_vehicle_2(collision.contributing_factor_vehicle_2.value());
+        }
+        if (collision.contributing_factor_vehicle_3.has_value()) {
+            proto_collision->set_contributing_factor_vehicle_3(collision.contributing_factor_vehicle_3.value());
+        }
+        if (collision.contributing_factor_vehicle_4.has_value()) {
+            proto_collision->set_contributing_factor_vehicle_4(collision.contributing_factor_vehicle_4.value());
+        }
+        if (collision.contributing_factor_vehicle_5.has_value()) {
+            proto_collision->set_contributing_factor_vehicle_5(collision.contributing_factor_vehicle_5.value());
+        }
+        if (collision.collision_id.has_value()) {
+            proto_collision->set_collision_id(collision.collision_id.value());
+        }
+        if (collision.vehicle_type_code_1.has_value()) {
+            proto_collision->set_vehicle_type_code_1(collision.vehicle_type_code_1.value());
+        }
+        if (collision.vehicle_type_code_2.has_value()) {
+            proto_collision->set_vehicle_type_code_2(collision.vehicle_type_code_2.value());
+        }
+        if (collision.vehicle_type_code_3.has_value()) {
+            proto_collision->set_vehicle_type_code_3(collision.vehicle_type_code_3.value());
+        }
+        if (collision.vehicle_type_code_4.has_value()) {
+            proto_collision->set_vehicle_type_code_4(collision.vehicle_type_code_4.value());
+        }
+        if (collision.vehicle_type_code_5.has_value()) {
+            proto_collision->set_vehicle_type_code_5(collision.vehicle_type_code_5.value());
+        }
+    }
 }

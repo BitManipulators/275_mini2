@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package collision_proto;
 
+import "google/protobuf/empty.proto";
+
 enum QueryType {
     HAS_VALUE = 0;
     EQUALS = 1;
@@ -11,7 +13,7 @@ enum QueryType {
 }
 
 enum QueryFields {
-    
+
     CRASH_DATE = 0;
     CRASH_TIME = 1;
     BOROUGH = 2 ;
@@ -62,45 +64,52 @@ message QueryCondition {
 }
 
 message QueryRequest {
-    repeated QueryCondition queries = 1;
+    optional uint64 id = 1;
+    repeated uint32 requested_by = 2;
+    repeated QueryCondition queries = 3;
 }
 
 message Collision {
-    string crash_date = 1; 
-    string crash_time = 2; 
-    string borough = 3; 
-    uint32 zip_code = 4; 
-    float latitude = 5; 
-    float longitude = 6; 
-    string location = 7; 
-    string on_street_name = 8; 
-    string cross_street_name = 9; 
-    string off_street_name = 10; 
-    uint32 number_of_persons_injured = 11; 
-    uint32 number_of_persons_killed = 12; 
-    uint32 number_of_pedestrians_injured = 13; 
-    uint32 number_of_pedestrians_killed = 14; 
-    uint32 number_of_cyclist_injured = 15; 
-    uint32 number_of_cyclist_killed = 16; 
-    uint32 number_of_motorist_injured = 17; 
-    uint32 number_of_motorist_killed = 18; 
-    string contributing_factor_vehicle_1 = 19; 
-    string contributing_factor_vehicle_2 = 20; 
-    string contributing_factor_vehicle_3 = 21; 
-    string contributing_factor_vehicle_4 = 22; 
-    string contributing_factor_vehicle_5 = 23; 
-    uint64 collision_id = 24; 
-    string vehicle_type_code_1 = 25; 
-    string vehicle_type_code_2 = 26; 
-    string vehicle_type_code_3 = 27; 
-    string vehicle_type_code_4 = 28; 
-    string vehicle_type_code_5 = 29; 
+    optional string crash_date = 1; 
+    optional string crash_time = 2; 
+    optional string borough = 3; 
+    optional uint32 zip_code = 4; 
+    optional float latitude = 5; 
+    optional float longitude = 6; 
+    optional string location = 7; 
+    optional string on_street_name = 8; 
+    optional string cross_street_name = 9; 
+    optional string off_street_name = 10; 
+    optional uint32 number_of_persons_injured = 11; 
+    optional uint32 number_of_persons_killed = 12; 
+    optional uint32 number_of_pedestrians_injured = 13; 
+    optional uint32 number_of_pedestrians_killed = 14; 
+    optional uint32 number_of_cyclist_injured = 15; 
+    optional uint32 number_of_cyclist_killed = 16; 
+    optional uint32 number_of_motorist_injured = 17; 
+    optional uint32 number_of_motorist_killed = 18; 
+    optional string contributing_factor_vehicle_1 = 19; 
+    optional string contributing_factor_vehicle_2 = 20; 
+    optional string contributing_factor_vehicle_3 = 21; 
+    optional string contributing_factor_vehicle_4 = 22; 
+    optional string contributing_factor_vehicle_5 = 23; 
+    optional uint64 collision_id = 24; 
+    optional string vehicle_type_code_1 = 25; 
+    optional string vehicle_type_code_2 = 26; 
+    optional string vehicle_type_code_3 = 27; 
+    optional string vehicle_type_code_4 = 28; 
+    optional string vehicle_type_code_5 = 29; 
 }
 
 message QueryResponse {
-    repeated Collision collision = 1;
+    uint64 id = 1;
+    uint32 results_from = 2;
+    repeated uint32 requested_by = 3;
+    repeated Collision collision = 4;
 }
 
 service CollisionQueryService {
     rpc GetCollisions (QueryRequest) returns (QueryResponse);
+    rpc SendRequest (QueryRequest) returns (google.protobuf.Empty);
+    rpc ReceiveResponse (QueryResponse) returns (google.protobuf.Empty);
 }
