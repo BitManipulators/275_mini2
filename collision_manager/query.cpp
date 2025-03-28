@@ -26,6 +26,20 @@ const bool FieldQuery::case_insensitive() const {
     return case_insensitive_;
 }
 
+Value maybe_convert_value_to_fixed_string(const CollisionField& name, const Value& value) {
+    FieldValueType field_value_type = field_to_value_type(name);
+    if (field_value_type == FieldValueType::FIXED_STRING) {
+        try {
+            const std::string& string_value = std::get<std::string>(value);
+            return CollisionString(std::string_view(string_value.c_str(), string_value.size()));
+        } catch (...) {
+            return value;
+        }
+    } else {
+        return value;
+    }
+}
+
 FieldQuery Query::create_field_query(const CollisionField& name,
                                      const Qualifier& not_qualifier,
                                      const QueryType& type,
@@ -53,7 +67,7 @@ FieldQuery Query::create_field_query(const CollisionField& name,
             if (name != CollisionField::COLLISION_ID) {
                 throw std::invalid_argument("Invalid field_name provided for std::size_t!");
             }
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        } else if constexpr (std::is_same_v<T, CollisionString>) {
             if (name != CollisionField::BOROUGH && name != CollisionField::LOCATION && name != CollisionField::ON_STREET_NAME &&
                 name != CollisionField::CROSS_STREET_NAME && name != CollisionField::OFF_STREET_NAME &&
                 name != CollisionField::CONTRIBUTING_FACTOR_VEHICLE_1 && name != CollisionField::CONTRIBUTING_FACTOR_VEHICLE_2 &&
@@ -61,7 +75,7 @@ FieldQuery Query::create_field_query(const CollisionField& name,
                 name != CollisionField::CONTRIBUTING_FACTOR_VEHICLE_5 && name != CollisionField::VEHICLE_TYPE_CODE_1 &&
                 name != CollisionField::VEHICLE_TYPE_CODE_2 && name != CollisionField::VEHICLE_TYPE_CODE_3 &&
                 name != CollisionField::VEHICLE_TYPE_CODE_4 && name != CollisionField::VEHICLE_TYPE_CODE_5) {
-                throw std::invalid_argument("Invalid field_name provided for std::string!");
+                throw std::invalid_argument("Invalid field_name provided for FixedString!");
             }
         } else if constexpr (std::is_same_v<T, std::chrono::year_month_day>) {
             if (name != CollisionField::CRASH_DATE) {
@@ -71,6 +85,8 @@ FieldQuery Query::create_field_query(const CollisionField& name,
             if (name != CollisionField::CRASH_TIME) {
                 throw std::invalid_argument("Invalid field_name provided for std::chrono::hh_mm_ss!");
             }
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            throw std::invalid_argument("Invalid field_name provided for std::string!");
         }
     }, value);
 
@@ -98,10 +114,11 @@ Query& Query::add(const CollisionField& name, const QueryType& type, const Value
 }
 
 Query& Query::add(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier) {
+    Value maybe_new_value = maybe_convert_value_to_fixed_string(name, value);
     return add(create_field_query(name,
                                   not_qualifier,
                                   type,
-                                  value,
+                                  maybe_new_value,
                                   case_insensitive_qualifier));
 }
 
@@ -130,9 +147,10 @@ Query Query::create(const CollisionField& name, const QueryType& type, const Val
 }
 
 Query Query::create(const CollisionField& name, const Qualifier& not_qualifier, const QueryType& type, const Value value, const Qualifier& case_insensitive_qualifier) {
+    Value maybe_new_value = maybe_convert_value_to_fixed_string(name, value);
     return Query(create_field_query(name,
                                     not_qualifier,
                                     type,
-                                    value,
+                                    maybe_new_value,
                                     case_insensitive_qualifier));
 }

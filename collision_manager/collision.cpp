@@ -71,9 +71,17 @@ bool do_match(const FieldQuery& query, const std::optional<T>& value) {
         default:
             throw std::runtime_error("Unsupported QueryType for std::chrono::hh_mm_ss");
         }
-    } else if constexpr (std::is_same_v<std::string, T>) {
-        std::string first_value = *value;
-        std::string second_value = query_value;
+    } else if constexpr (std::is_same_v<std::string, T> || std::is_same_v<CollisionString, T>) {
+        std::string first_value;
+        std::string second_value;
+        if constexpr (std::is_same_v<std::string, T>) {
+            first_value = *value;
+            second_value = query_value;
+        } else if constexpr (std::is_same_v<CollisionString, T>) {
+            first_value = std::string((*value).data, (*value).length);
+            second_value = std::string(query_value.data, query_value.length);
+        }
+
         if (query.case_insensitive()) {
             std::transform(first_value.begin(), first_value.end(), first_value.begin(), ::tolower);
             std::transform(second_value.begin(), second_value.end(), second_value.begin(), ::tolower);
@@ -454,7 +462,7 @@ std::ostream& operator<<(std::ostream& os, const CollisionProxy& collision) {
     os << std::format("crash_time = {}", collision.crash_time->has_value() ?
         std::format("{:%H:%M}", collision.crash_time->value()) : "(no value)") << ", ";
     os << std::format("borough = {}", collision.borough->has_value() ?
-        collision.borough->value() : "(no value)") << ", ";
+        collision.borough->value().data : "(no value)") << ", ";
     os << std::format("zip_code = {}", collision.zip_code->has_value() ?
         std::to_string(collision.zip_code->value()) : "(no value)") << ", ";
     os << std::format("latitude = {}", collision.latitude->has_value() ?
@@ -462,13 +470,13 @@ std::ostream& operator<<(std::ostream& os, const CollisionProxy& collision) {
     os << std::format("longitude = {}", collision.longitude->has_value() ?
         std::to_string(collision.longitude->value()) : "(no value)") << ", ";
     os << std::format("location = {}", collision.location->has_value() ?
-        collision.location->value() : "(no value)") << ", ";
+        collision.location->value().data : "(no value)") << ", ";
     os << std::format("on_street_name = {}", collision.on_street_name->has_value() ?
-        collision.on_street_name->value() : "(no value)") << ", ";
+        collision.on_street_name->value().data : "(no value)") << ", ";
     os << std::format("cross_street_name = {}", collision.cross_street_name->has_value() ?
-        collision.cross_street_name->value() : "(no value)") << ", ";
+        collision.cross_street_name->value().data : "(no value)") << ", ";
     os << std::format("off_street_name = {}", collision.off_street_name->has_value() ?
-        collision.off_street_name->value() : "(no value)") << ", ";
+        collision.off_street_name->value().data : "(no value)") << ", ";
     os << std::format("number_of_persons_injured = {}", collision.number_of_persons_injured->has_value() ?
         std::to_string(collision.number_of_persons_injured->value()) : "(no value)") << ", ";
     os << std::format("number_of_persons_killed = {}", collision.number_of_persons_killed->has_value() ?
@@ -486,27 +494,27 @@ std::ostream& operator<<(std::ostream& os, const CollisionProxy& collision) {
     os << std::format("number_of_motorist_killed = {}", collision.number_of_motorist_killed->has_value() ?
         std::to_string(collision.number_of_motorist_killed->value()) : "(no value)") << ", ";
     os << std::format("contributing_factor_vehicle_1 = {}", collision.contributing_factor_vehicle_1->has_value() ?
-        collision.contributing_factor_vehicle_1->value() : "(no value)") << ", ";
+        collision.contributing_factor_vehicle_1->value().data : "(no value)") << ", ";
     os << std::format("contributing_factor_vehicle_2 = {}", collision.contributing_factor_vehicle_2->has_value() ?
-        collision.contributing_factor_vehicle_2->value() : "(no value)") << ", ";
+        collision.contributing_factor_vehicle_2->value().data : "(no value)") << ", ";
     os << std::format("contributing_factor_vehicle_3 = {}", collision.contributing_factor_vehicle_3->has_value() ?
-        collision.contributing_factor_vehicle_3->value() : "(no value)") << ", ";
+        collision.contributing_factor_vehicle_3->value().data : "(no value)") << ", ";
     os << std::format("contributing_factor_vehicle_4 = {}", collision.contributing_factor_vehicle_4->has_value() ?
-        collision.contributing_factor_vehicle_4->value() : "(no value)") << ", ";
+        collision.contributing_factor_vehicle_4->value().data : "(no value)") << ", ";
     os << std::format("contributing_factor_vehicle_5 = {}", collision.contributing_factor_vehicle_5->has_value() ?
-        collision.contributing_factor_vehicle_5->value() : "(no value)") << ", ";
+        collision.contributing_factor_vehicle_5->value().data : "(no value)") << ", ";
     os << std::format("collision_id = {}", collision.collision_id->has_value() ?
         std::to_string(collision.collision_id->value()) : "(no value)") << ", ";
     os << std::format("vehicle_type_code_1 = {}", collision.vehicle_type_code_1->has_value() ?
-        collision.vehicle_type_code_1->value() : "(no value)") << ", ";
+        collision.vehicle_type_code_1->value().data : "(no value)") << ", ";
     os << std::format("vehicle_type_code_2 = {}", collision.vehicle_type_code_2->has_value() ?
-        collision.vehicle_type_code_2->value() : "(no value)") << ", ";
+        collision.vehicle_type_code_2->value().data : "(no value)") << ", ";
     os << std::format("vehicle_type_code_3 = {}", collision.vehicle_type_code_3->has_value() ?
-        collision.vehicle_type_code_3->value() : "(no value)") << ", ";
+        collision.vehicle_type_code_3->value().data : "(no value)") << ", ";
     os << std::format("vehicle_type_code_4 = {}", collision.vehicle_type_code_4->has_value() ?
-        collision.vehicle_type_code_4->value() : "(no value)") << ", ";
+        collision.vehicle_type_code_4->value().data : "(no value)") << ", ";
     os << std::format("vehicle_type_code_5 = {}", collision.vehicle_type_code_5->has_value() ?
-        collision.vehicle_type_code_5->value() : "(no value)") << ", ";
+        collision.vehicle_type_code_5->value().data : "(no value)") << ", ";
 
     os << "}";
     return os;

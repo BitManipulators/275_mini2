@@ -656,7 +656,7 @@ TEST_F(CollisionManagerTest, CompoundQuery_Match_MutipleCollisions) {
         EXPECT_TRUE(collision->borough->value() == borough &&
         collision->crash_date->value() > date1 && collision->crash_date->value() < date2 &&
         collision->contributing_factor_vehicle_2->value() == contributing_factor_vehicle_2 &&
-        collision->vehicle_type_code_1->value() == vehicle_type_code_1 || collision->vehicle_type_code_2->has_value() && collision->vehicle_type_code_2->value().find(vehicle_type_code_2) != std::string::npos)
+        collision->vehicle_type_code_1->value() == vehicle_type_code_1 || collision->vehicle_type_code_2->has_value() && std::string(collision->vehicle_type_code_2->value().c_str()).find(vehicle_type_code_2) != std::string::npos)
             << "Each result should have dates in between " << date1 << " and " << date2 << " . The contributing factor to the collisions is anything " << contributing_factor_vehicle_2
             << " . The vehicles involved are " << vehicle_type_code_1 << " and " << vehicle_type_code_2;
     }
@@ -675,7 +675,7 @@ TEST_F(CollisionManagerTest, Query_Match_VehicleType) {
     EXPECT_GT(results.size(), 0) << "Search should return at least one result";
 
     for(const auto *collision : results) {
-        EXPECT_TRUE(collision->vehicle_type_code_2->has_value() && collision->vehicle_type_code_2->value().find(vehicle_type_code_2) != std::string::npos) << " Each result should contain " << vehicle_type_code_2;
+        EXPECT_TRUE(collision->vehicle_type_code_2->has_value() && std::string(collision->vehicle_type_code_2->value().c_str()).find(vehicle_type_code_2) != std::string::npos) << " Each result should contain " << vehicle_type_code_2;
     }
 
     std::cout << " Found " << results.size() << " with vehicle_type_code_2 containing " << vehicle_type_code_2;

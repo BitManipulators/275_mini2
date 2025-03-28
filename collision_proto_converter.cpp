@@ -16,7 +16,7 @@ QueryResponse CollisionProtoConverter::deserialize(const collision_proto::QueryR
             collision.crash_time = collision_parser_converters::convert_hour_minute_time(collision_proto.crash_time());
         }
         if (collision_proto.has_borough()) {
-            collision.borough = collision_proto.borough();
+            collision.borough = CollisionString(collision_proto.borough().c_str());
         }
         if (collision_proto.has_zip_code()) {
             collision.zip_code = collision_proto.zip_code();
@@ -28,16 +28,16 @@ QueryResponse CollisionProtoConverter::deserialize(const collision_proto::QueryR
             collision.longitude = collision_proto.longitude();
         }
         if (collision_proto.has_location()) {
-            collision.location = collision_proto.location();
+            collision.location = CollisionString(collision_proto.location().c_str());
         }
         if (collision_proto.has_on_street_name()) {
-            collision.on_street_name = collision_proto.on_street_name();
+            collision.on_street_name = CollisionString(collision_proto.on_street_name().c_str());
         }
         if (collision_proto.has_cross_street_name()) {
-            collision.cross_street_name = collision_proto.cross_street_name();
+            collision.cross_street_name = CollisionString(collision_proto.cross_street_name().c_str());
         }
         if (collision_proto.has_off_street_name()) {
-            collision.off_street_name = collision_proto.off_street_name();
+            collision.off_street_name = CollisionString(collision_proto.off_street_name().c_str());
         }
         if (collision_proto.has_number_of_persons_injured()) {
             collision.number_of_persons_injured = collision_proto.number_of_persons_injured();
@@ -64,37 +64,37 @@ QueryResponse CollisionProtoConverter::deserialize(const collision_proto::QueryR
             collision.number_of_motorist_killed = collision_proto.number_of_motorist_killed();
         }
         if (collision_proto.has_contributing_factor_vehicle_1()) {
-            collision.contributing_factor_vehicle_1 = collision_proto.contributing_factor_vehicle_1();
+            collision.contributing_factor_vehicle_1 = CollisionString(collision_proto.contributing_factor_vehicle_1().c_str());
         }
         if (collision_proto.has_contributing_factor_vehicle_2()) {
-            collision.contributing_factor_vehicle_2 = collision_proto.contributing_factor_vehicle_2();
+            collision.contributing_factor_vehicle_2 = CollisionString(collision_proto.contributing_factor_vehicle_2().c_str());
         }
         if (collision_proto.has_contributing_factor_vehicle_3()) {
-            collision.contributing_factor_vehicle_3 = collision_proto.contributing_factor_vehicle_3();
+            collision.contributing_factor_vehicle_3 = CollisionString(collision_proto.contributing_factor_vehicle_3().c_str());
         }
         if (collision_proto.has_contributing_factor_vehicle_4()) {
-            collision.contributing_factor_vehicle_4 = collision_proto.contributing_factor_vehicle_4();
+            collision.contributing_factor_vehicle_4 = CollisionString(collision_proto.contributing_factor_vehicle_4().c_str());
         }
         if (collision_proto.has_contributing_factor_vehicle_5()) {
-            collision.contributing_factor_vehicle_5 = collision_proto.contributing_factor_vehicle_5();
+            collision.contributing_factor_vehicle_5 = CollisionString(collision_proto.contributing_factor_vehicle_5().c_str());
         }
         if (collision_proto.has_collision_id()) {
             collision.collision_id = collision_proto.collision_id();
         }
         if (collision_proto.has_vehicle_type_code_1()) {
-            collision.vehicle_type_code_1 = collision_proto.vehicle_type_code_1();
+            collision.vehicle_type_code_1 = CollisionString(collision_proto.vehicle_type_code_1().c_str());
         }
         if (collision_proto.has_vehicle_type_code_2()) {
-            collision.vehicle_type_code_2 = collision_proto.vehicle_type_code_2();
+            collision.vehicle_type_code_2 = CollisionString(collision_proto.vehicle_type_code_2().c_str());
         }
         if (collision_proto.has_vehicle_type_code_3()) {
-            collision.vehicle_type_code_3 = collision_proto.vehicle_type_code_3();
+            collision.vehicle_type_code_3 = CollisionString(collision_proto.vehicle_type_code_3().c_str());
         }
         if (collision_proto.has_vehicle_type_code_4()) {
-            collision.vehicle_type_code_4 = collision_proto.vehicle_type_code_4();
+            collision.vehicle_type_code_4 = CollisionString(collision_proto.vehicle_type_code_4().c_str());
         }
         if (collision_proto.has_vehicle_type_code_5()) {
-            collision.vehicle_type_code_5 = collision_proto.vehicle_type_code_5();
+            collision.vehicle_type_code_5 = CollisionString(collision_proto.vehicle_type_code_5().c_str());
         }
         collisions.push_back(collision);
     }
@@ -142,7 +142,7 @@ void CollisionProtoConverter::serialize(const QueryResponse& query_response, col
             proto_collision->set_crash_time(std::format("{:02}:{:02}", (int)time.hours().count(), (int)time.minutes().count()));
         }
         if (collision.borough.has_value()) {
-            proto_collision->set_borough(collision.borough.value());
+            proto_collision->set_borough(std::string_view(collision.borough.value().data, collision.borough.value().length));
         }
         if (collision.zip_code.has_value()) {
             proto_collision->set_zip_code(collision.zip_code.value());
@@ -154,16 +154,16 @@ void CollisionProtoConverter::serialize(const QueryResponse& query_response, col
             proto_collision->set_longitude(collision.longitude.value());
         }
         if (collision.location.has_value()) {
-            proto_collision->set_location(collision.location.value());
+            proto_collision->set_location(std::string_view(collision.location.value().data, collision.location.value().length));
         }
         if (collision.on_street_name.has_value()) {
-            proto_collision->set_on_street_name(collision.on_street_name.value());
+            proto_collision->set_on_street_name(std::string_view(collision.on_street_name.value().data, collision.on_street_name.value().length));
         }
         if (collision.cross_street_name.has_value()) {
-            proto_collision->set_cross_street_name(collision.cross_street_name.value());
+            proto_collision->set_cross_street_name(std::string_view(collision.cross_street_name.value().data, collision.cross_street_name.value().length));
         }
         if (collision.off_street_name.has_value()) {
-            proto_collision->set_off_street_name(collision.off_street_name.value());
+            proto_collision->set_off_street_name(std::string_view(collision.off_street_name.value().data, collision.off_street_name.value().length));
         }
         if (collision.number_of_persons_injured.has_value()) {
             proto_collision->set_number_of_persons_injured(collision.number_of_persons_injured.value());
@@ -190,37 +190,47 @@ void CollisionProtoConverter::serialize(const QueryResponse& query_response, col
             proto_collision->set_number_of_motorist_killed(collision.number_of_motorist_killed.value());
         }
         if (collision.contributing_factor_vehicle_1.has_value()) {
-            proto_collision->set_contributing_factor_vehicle_1(collision.contributing_factor_vehicle_1.value());
+            proto_collision->set_contributing_factor_vehicle_1(std::string_view(collision.contributing_factor_vehicle_1.value().data,
+                                                                                collision.contributing_factor_vehicle_1.value().length));
         }
         if (collision.contributing_factor_vehicle_2.has_value()) {
-            proto_collision->set_contributing_factor_vehicle_2(collision.contributing_factor_vehicle_2.value());
+            proto_collision->set_contributing_factor_vehicle_2(std::string_view(collision.contributing_factor_vehicle_2.value().data,
+                                                                                collision.contributing_factor_vehicle_2.value().length));
         }
         if (collision.contributing_factor_vehicle_3.has_value()) {
-            proto_collision->set_contributing_factor_vehicle_3(collision.contributing_factor_vehicle_3.value());
+            proto_collision->set_contributing_factor_vehicle_3(std::string_view(collision.contributing_factor_vehicle_3.value().data,
+                                                                                collision.contributing_factor_vehicle_3.value().length));
         }
         if (collision.contributing_factor_vehicle_4.has_value()) {
-            proto_collision->set_contributing_factor_vehicle_4(collision.contributing_factor_vehicle_4.value());
+            proto_collision->set_contributing_factor_vehicle_4(std::string_view(collision.contributing_factor_vehicle_4.value().data,
+                                                                                collision.contributing_factor_vehicle_4.value().length));
         }
         if (collision.contributing_factor_vehicle_5.has_value()) {
-            proto_collision->set_contributing_factor_vehicle_5(collision.contributing_factor_vehicle_5.value());
+            proto_collision->set_contributing_factor_vehicle_5(std::string_view(collision.contributing_factor_vehicle_5.value().data,
+                                                                                collision.contributing_factor_vehicle_5.value().length));
         }
         if (collision.collision_id.has_value()) {
             proto_collision->set_collision_id(collision.collision_id.value());
         }
         if (collision.vehicle_type_code_1.has_value()) {
-            proto_collision->set_vehicle_type_code_1(collision.vehicle_type_code_1.value());
+            proto_collision->set_vehicle_type_code_1(std::string_view(collision.vehicle_type_code_1.value().data,
+                                                                      collision.vehicle_type_code_1.value().length));
         }
         if (collision.vehicle_type_code_2.has_value()) {
-            proto_collision->set_vehicle_type_code_2(collision.vehicle_type_code_2.value());
+            proto_collision->set_vehicle_type_code_2(std::string_view(collision.vehicle_type_code_2.value().data,
+                                                                      collision.vehicle_type_code_2.value().length));
         }
         if (collision.vehicle_type_code_3.has_value()) {
-            proto_collision->set_vehicle_type_code_3(collision.vehicle_type_code_3.value());
+            proto_collision->set_vehicle_type_code_3(std::string_view(collision.vehicle_type_code_3.value().data,
+                                                                      collision.vehicle_type_code_3.value().length));
         }
         if (collision.vehicle_type_code_4.has_value()) {
-            proto_collision->set_vehicle_type_code_4(collision.vehicle_type_code_4.value());
+            proto_collision->set_vehicle_type_code_4(std::string_view(collision.vehicle_type_code_4.value().data,
+                                                                      collision.vehicle_type_code_4.value().length));
         }
         if (collision.vehicle_type_code_5.has_value()) {
-            proto_collision->set_vehicle_type_code_5(collision.vehicle_type_code_5.value());
+            proto_collision->set_vehicle_type_code_5(std::string_view(collision.vehicle_type_code_5.value().data,
+                                                                      collision.vehicle_type_code_5.value().length));
         }
     }
 }
