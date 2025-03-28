@@ -1,6 +1,7 @@
 #include "collision_query_service_impl.hpp"
 #include "collision_proto_converter.hpp"
 #include "query_proto_converter.hpp"
+#include "ring_buffer.hpp"
 #include "yaml_parser.hpp"
 
 #include "collision_manager/collision_manager.hpp"
@@ -11,7 +12,6 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -27,11 +27,11 @@ static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<Co
 std::uint32_t rank;
 
 std::mutex pendingRequestsMutex{};
-std::queue<QueryRequest> pendingRequests{};
+PendingRequestsRingbuffer pendingRequests{};
 std::condition_variable pendingRequestsConditionVariable{};
 
 std::mutex pendingResponsesMutex{};
-std::queue<QueryResponse> pendingResponses{};
+PendingResponsesRingbuffer pendingResponses{};
 std::condition_variable pendingResponsesConditionVariable{};
 
 std::vector<std::thread> requestWorkers{};
@@ -99,19 +99,17 @@ grpc::Status sendResults(const std::string peer_address, const QueryResponse& qu
 
 QueryRequest wait_for_new_query_request(std::uint32_t id) {
     std::unique_lock<std::mutex> lock(pendingRequestsMutex);
-    pendingRequestsConditionVariable.wait(lock, []() { return !pendingRequests.empty(); });
+    pendingRequestsConditionVariable.wait(lock, []() { return !pendingRequests.is_empty(); });
 
-    QueryRequest query_request = pendingRequests.front();
-    pendingRequests.pop();
+    QueryRequest&& query_request = pendingRequests.pop();
     return query_request;
 }
 
 QueryResponse wait_for_new_query_response(std::uint32_t id) {
     std::unique_lock<std::mutex> lock(pendingResponsesMutex);
-    pendingResponsesConditionVariable.wait(lock, []() { return !pendingResponses.empty(); });
+    pendingResponsesConditionVariable.wait(lock, []() { return !pendingResponses.is_empty(); });
 
-    QueryResponse query_response = pendingResponses.front();
-    pendingResponses.pop();
+    QueryResponse&& query_response = pendingResponses.pop();
     return query_response;
 }
 
@@ -135,7 +133,7 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
             pendingResponsesConditionVariable.notify_one();
 
             std::cout << "Added response from: '" << static_cast<char>('A' + query_response.results_from) <<
-                         "' with id: '" << query_response.id << "' to the pendingResponses queue" << std::endl;
+                         "' with id: '" << query_response.id << "' to the pendingResponses ringbuffer" << std::endl;
         }
 
         // TODO: This should just iterate over each children() or something.
