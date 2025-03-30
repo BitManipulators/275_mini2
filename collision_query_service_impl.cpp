@@ -6,7 +6,6 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <unordered_map>
 
@@ -20,8 +19,8 @@ CollisionQueryServiceImpl::CollisionQueryServiceImpl(
     std::uint32_t rank,
     std::mutex& pending_requests_mutex,
     std::mutex& pending_responses_mutex,
-    std::queue<QueryRequest>& pending_requests,
-    std::queue<QueryResponse>& pending_responses,
+    PendingRequestsRingbuffer& pending_requests,
+    PendingResponsesRingbuffer& pending_responses,
     std::condition_variable& pending_requests_cv,
     std::condition_variable& pending_responses_cv,
     std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map)
@@ -90,7 +89,7 @@ GetCollisionsCallData::GetCollisionsCallData(
     ServerCompletionQueue* cq,
     std::uint32_t rank,
     std::mutex& pending_requests_mutex,
-    std::queue<QueryRequest>& pending_requests,
+    PendingRequestsRingbuffer& pending_requests,
     std::condition_variable& pending_requests_cv,
     std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map)
     : service_(service)
@@ -176,7 +175,7 @@ SendRequestCallData::SendRequestCallData(
     CollisionQueryServiceImpl* service,
     ServerCompletionQueue* cq,
     std::mutex& pending_requests_mutex,
-    std::queue<QueryRequest>& pending_requests,
+    PendingRequestsRingbuffer& pending_requests,
     std::condition_variable& pending_requests_cv)
     : service_(service)
     , cq_(cq)
@@ -226,7 +225,7 @@ ReceiveResponseCallData::ReceiveResponseCallData(
     CollisionQueryServiceImpl* service,
     ServerCompletionQueue* cq,
     std::mutex& pending_responses_mutex,
-    std::queue<QueryResponse>& pending_responses,
+    PendingResponsesRingbuffer& pending_responses,
     std::condition_variable& pending_responses_cv)
     : service_(service)
     , cq_(cq)

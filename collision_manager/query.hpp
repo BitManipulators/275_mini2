@@ -30,11 +30,11 @@ private:
         invert_match_{invert_match},
         case_insensitive_{case_insensitive} {}
 
-    const CollisionField name_;
-    const QueryType type_;
-    const Value value_;
-    const bool invert_match_;
-    const bool case_insensitive_;
+    CollisionField name_;
+    QueryType type_;
+    Value value_;
+    bool invert_match_;
+    bool case_insensitive_;
 
 public:
     friend class Query;
@@ -48,6 +48,9 @@ public:
 };
 
 class Query {
+public:
+    Query() : queries{} {}
+
 private:
     Query(FieldQuery&& query)
       : queries{query}
