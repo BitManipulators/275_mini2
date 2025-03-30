@@ -1,6 +1,10 @@
 #pragma once
 
+#include "fixed_string.hpp"
+
 #include <stdexcept>
+
+using CollisionString = FixedString<64>;
 
 enum class CollisionField {
     CRASH_DATE = 0,
@@ -56,7 +60,7 @@ inline bool is_indexed_field(CollisionField field) {
     }
 }
 
-enum class FieldValueType { UINT8_T, UINT32_T, SIZE_T, FLOAT, DATE, TIME, STRING };
+enum class FieldValueType { UINT8_T, UINT32_T, SIZE_T, FLOAT, DATE, TIME, STRING, FIXED_STRING };
 
 inline FieldValueType field_to_value_type(const CollisionField collision_field) {
     switch(collision_field) {
@@ -79,7 +83,7 @@ inline FieldValueType field_to_value_type(const CollisionField collision_field) 
         case CollisionField::VEHICLE_TYPE_CODE_3:
         case CollisionField::VEHICLE_TYPE_CODE_4:
         case CollisionField::VEHICLE_TYPE_CODE_5:
-            return FieldValueType::STRING;
+            return FieldValueType::FIXED_STRING;
         case CollisionField::ZIP_CODE:
             return FieldValueType::UINT32_T;
         case CollisionField::LATITUDE:

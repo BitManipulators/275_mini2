@@ -24,6 +24,10 @@ std::optional<std::string> convert_string(const std::string_view& field) {
     return std::string(field);
 }
 
+std::optional<CollisionString> convert_fixed_string(const std::string_view& field) {
+    return CollisionString(field);
+}
+
 template<typename T>
 std::optional<T> convert_number(const std::string_view& field) {
     T number;
@@ -78,7 +82,7 @@ void parseline(const std::string& line, Collisions& collisions) {
                             collision.crash_time = collision_parser_converters::convert_hour_minute_time(field);
                             break;
                         case CollisionField::BOROUGH:
-                            collision.borough = convert_string(field);
+                            collision.borough = convert_fixed_string(field);
                             break;
                         case CollisionField::ZIP_CODE:
                             collision.zip_code = convert_number<std::size_t>(field);
@@ -90,16 +94,16 @@ void parseline(const std::string& line, Collisions& collisions) {
                             collision.longitude = convert_number<float>(field);
                             break;
                         case CollisionField::LOCATION:
-                            collision.location = convert_string(field);
+                            collision.location = convert_fixed_string(field);
                             break;
                         case CollisionField::ON_STREET_NAME:
-                            collision.on_street_name = convert_string(field);
+                            collision.on_street_name = convert_fixed_string(field);
                             break;
                         case CollisionField::CROSS_STREET_NAME:
-                            collision.cross_street_name = convert_string(field);
+                            collision.cross_street_name = convert_fixed_string(field);
                             break;
                         case CollisionField::OFF_STREET_NAME:
-                            collision.off_street_name = convert_string(field);
+                            collision.off_street_name = convert_fixed_string(field);
                             break;
                         case CollisionField::NUMBER_OF_PERSONS_INJURED:
                             collision.number_of_persons_injured = convert_number<std::size_t>(field);
@@ -126,37 +130,37 @@ void parseline(const std::string& line, Collisions& collisions) {
                             collision.number_of_motorist_killed = convert_number<std::size_t>(field);
                             break;
                         case CollisionField::CONTRIBUTING_FACTOR_VEHICLE_1:
-                            collision.contributing_factor_vehicle_1 = convert_string(field);
+                            collision.contributing_factor_vehicle_1 = convert_fixed_string(field);
                             break;
                         case CollisionField::CONTRIBUTING_FACTOR_VEHICLE_2:
-                            collision.contributing_factor_vehicle_2 = convert_string(field);
+                            collision.contributing_factor_vehicle_2 = convert_fixed_string(field);
                             break;
                         case CollisionField::CONTRIBUTING_FACTOR_VEHICLE_3:
-                            collision.contributing_factor_vehicle_3 = convert_string(field);
+                            collision.contributing_factor_vehicle_3 = convert_fixed_string(field);
                             break;
                         case CollisionField::CONTRIBUTING_FACTOR_VEHICLE_4:
-                            collision.contributing_factor_vehicle_4 = convert_string(field);
+                            collision.contributing_factor_vehicle_4 = convert_fixed_string(field);
                             break;
                         case CollisionField::CONTRIBUTING_FACTOR_VEHICLE_5:
-                            collision.contributing_factor_vehicle_5 = convert_string(field);
+                            collision.contributing_factor_vehicle_5 = convert_fixed_string(field);
                             break;
                         case CollisionField::COLLISION_ID:
                             collision.collision_id = convert_number<std::size_t>(field);
                             break;
                         case CollisionField::VEHICLE_TYPE_CODE_1:
-                            collision.vehicle_type_code_1 = convert_string(field);
+                            collision.vehicle_type_code_1 = convert_fixed_string(field);
                             break;
                         case CollisionField::VEHICLE_TYPE_CODE_2:
-                            collision.vehicle_type_code_2 = convert_string(field);
+                            collision.vehicle_type_code_2 = convert_fixed_string(field);
                             break;
                         case CollisionField::VEHICLE_TYPE_CODE_3:
-                            collision.vehicle_type_code_3 = convert_string(field);
+                            collision.vehicle_type_code_3 = convert_fixed_string(field);
                             break;
                         case CollisionField::VEHICLE_TYPE_CODE_4:
-                            collision.vehicle_type_code_4 = convert_string(field);
+                            collision.vehicle_type_code_4 = convert_fixed_string(field);
                             break;
                         case CollisionField::VEHICLE_TYPE_CODE_5:
-                            collision.vehicle_type_code_5 = convert_string(field);
+                            collision.vehicle_type_code_5 = convert_fixed_string(field);
                             break;
                         case CollisionField::UNDEFINED:
                         default:

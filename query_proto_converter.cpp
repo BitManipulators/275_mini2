@@ -86,6 +86,8 @@ Value from_proto_query_value(const collision_proto::QueryCondition& proto_query_
             return proto_query_condition.float_data();
         case FieldValueType::STRING:
             return proto_query_condition.string_data();
+        case FieldValueType::FIXED_STRING:
+            return CollisionString(proto_query_condition.string_data().c_str());
         case FieldValueType::DATE:
         case FieldValueType::TIME:
         default:
@@ -186,6 +188,8 @@ void serialize_proto_data(collision_proto::QueryCondition* condition, const Fiel
             condition->set_uint64_data(val);
         } else if constexpr (std::is_same_v<T, std::string>) {
             condition->set_string_data(val);
+        } else if constexpr (std::is_same_v<T, CollisionString>) {
+            condition->set_string_data(val.c_str());
         } else if constexpr (std::is_same_v<T, std::chrono::year_month_day>) {
             throw std::invalid_argument("Date not support yet!");
         } else if constexpr (std::is_same_v<T, std::chrono::hh_mm_ss<std::chrono::minutes>>) {

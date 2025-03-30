@@ -12,18 +12,25 @@ CollisionManager::CollisionManager(const std::string& filename) {
     CollisionParser parser{filename};
 
     try {
+        int rank = -1;
+        if (const char *env_rank = std::getenv("RANK"))
+        {
+            rank = std::atoi(env_rank);
+        }
+
+        if (rank == -1) {
+            Collisions collisions = parser.parse();
+            this->indexed_collisions_ = IndexedCollisions(collisions);
+            this->initialization_error_ = "";
+            return;
+        }
+
         int totalRecords = parser.getTotalRecords();
 
         int totalPartitions = 5;
         if (const char *env_total = std::getenv("TOTAL_PARTITIONS"))
         {
             totalPartitions = std::atoi(env_total);
-        }
-
-        int rank = 0;
-        if (const char *env_rank = std::getenv("RANK"))
-        {
-            rank = std::atoi(env_rank);
         }
 
         int partitionSize = totalRecords / totalPartitions;
@@ -34,8 +41,7 @@ CollisionManager::CollisionManager(const std::string& filename) {
                   << " will process records from " << start_index
                   << " to " << end_index - 1 << std::endl;
 
-       // Collisions collisions = parser.parse();
-       Collisions collisions = parser.parsePartition(start_index, end_index);
+        Collisions collisions = parser.parsePartition(start_index, end_index);
 
         this->indexed_collisions_ = IndexedCollisions(collisions);
         this->initialization_error_ = "";

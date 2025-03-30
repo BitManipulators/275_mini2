@@ -1,6 +1,7 @@
 #pragma once
 
 #include "collision_field_enum.hpp"
+#include "fixed_string.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -14,7 +15,8 @@ using Value = std::variant<
     std::chrono::year_month_day,
     std::chrono::hh_mm_ss<std::chrono::minutes>,
     std::uint8_t,
-    std::uint32_t>;
+    std::uint32_t,
+    CollisionString>;
 
 enum class QueryType { HAS_VALUE, EQUALS, LESS_THAN, GREATER_THAN, CONTAINS };
 enum class Qualifier { NONE, NOT, CASE_INSENSITIVE };
