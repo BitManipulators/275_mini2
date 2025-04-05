@@ -7,22 +7,28 @@
 #include <future>
 #include <filesystem>
 #include <iostream>
+#include <atomic>
 
 
-const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_20250123.csv");
+const std::string CSV_FILE = std::string("/home/suriya-018231499/cpp_projects/parser_data/Motor_Vehicle_Collisions_-_Crashes_20250204.csv");
 
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
 std::mutex queryMutex;
-std::unordered_set<std::string> processedQueries;
+std::unordered_set<int> processedQueries;
+
+std::atomic<int> counter(0);
+
+
 
 // Compute a hash for the query using its DebugString
-std::string computeQueryHash(const collision_proto::QueryRequest& request) {
+
+/*std::string computeQueryHash(const collision_proto::QueryRequest& request) {
     std::string queryStr = request.DebugString(); // Use DebugString to serialize the query
     std::hash<std::string> hasher;
     size_t hashValue = hasher(queryStr);
     return std::to_string(hashValue);
-}
+} */
 
 QueryResponse queryPeer(const std::string peer_address, const collision_proto::QueryRequest &request)
 {
@@ -65,22 +71,36 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
     const char* rankEnv = std::getenv("RANK");
     int rank = rankEnv ? std::stoi(rankEnv) : 0;
 
+   
+   
+   
+    QueryRequest query_request = QueryProtoConverter::deserialize(*request);
+
+    if (rank == 0){
+        
+        query_request.id = counter.fetch_add(1);
+
+
+    }
+    
+
     // For Process E (rank 4), check for duplicate queries.
     if (rank == 4) {
-        std::string queryHash = computeQueryHash(*request);
+        
+        int request_id = request->id();
+        
         {
             std::lock_guard<std::mutex> lock(queryMutex);
-            if (processedQueries.find(queryHash) != processedQueries.end()) {
-                std::cerr << "Duplicate query detected in Process E (hash: " << queryHash << "). Rejecting query." << std::endl;
+            if (processedQueries.find(request_id) != processedQueries.end()) {
+                std::cerr << "Duplicate query detected in Process E (hash: " << request_id << "). Rejecting query." << std::endl;
                 return grpc::Status(grpc::StatusCode::ALREADY_EXISTS, "Query already processed");
             }
             // Mark query as processed.
-            processedQueries.insert(queryHash);
+            processedQueries.insert(request_id);
         }
     }
 
-    // Run the local query.
-    QueryRequest query_request = QueryProtoConverter::deserialize(*request);
+    
     std::vector<Collision> localResults = collision_manager->search(query_request.query);
 
     std::vector<Collision> aggregatedResults{};
@@ -89,14 +109,17 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
     // Query based on overlay:
     if (rank == 0) {
         // Process A: query only Process B.
-        QueryResponse resultsB = queryPeer("127.0.0.1:50052", *request);
+        
+        collision_proto::QueryRequest forward_request = QueryProtoConverter::serialize(query_request);
+        QueryResponse resultsB = queryPeer("127.0.0.1:50052", forward_request);
         aggregatedResults.insert(aggregatedResults.end(), resultsB.collisions.begin(), resultsB.collisions.end());
         std::cout << "Results from B: " << resultsB.collisions.size() << std::endl;
     }
     else if (rank == 1) {
         // Process B: query Processes C and D.
-        QueryResponse resultsC = queryPeer("127.0.0.1:50053", *request);
-        QueryResponse resultsD = queryPeer("127.0.0.1:50054", *request);
+        collision_proto::QueryRequest forward_request = QueryProtoConverter::serialize(query_request);
+        QueryResponse resultsC = queryPeer("127.0.0.1:50053", forward_request);
+        QueryResponse resultsD = queryPeer("127.0.0.1:50054", forward_request);
         aggregatedResults.insert(aggregatedResults.end(), resultsC.collisions.begin(), resultsC.collisions.end());
         aggregatedResults.insert(aggregatedResults.end(), resultsD.collisions.begin(), resultsD.collisions.end());
         std::cout << "Results from C: " << resultsC.collisions.size() << std::endl;
@@ -104,13 +127,16 @@ grpc::Status GetCollisions(grpc::ServerContext* context,
     }
     else if (rank == 2) {
         // Process C: query Process E.
-        QueryResponse resultsE = queryPeer("127.0.0.1:50055", *request);
+        
+        collision_proto::QueryRequest forward_request = QueryProtoConverter::serialize(query_request);
+        QueryResponse resultsE = queryPeer("127.0.0.1:50055", forward_request);
         aggregatedResults.insert(aggregatedResults.end(), resultsE.collisions.begin(), resultsE.collisions.end());
         std::cout << "Results from E: " << resultsE.collisions.size() << std::endl;
     }
     else if (rank == 3) {
         // Process D: query Process E.
-        QueryResponse resultsE = queryPeer("127.0.0.1:50055", *request);
+        collision_proto::QueryRequest forward_request = QueryProtoConverter::serialize(query_request);
+        QueryResponse resultsE = queryPeer("127.0.0.1:50055", forward_request);
         aggregatedResults.insert(aggregatedResults.end(), resultsE.collisions.begin(), resultsE.collisions.end());
         std::cout << "Results from E: " << resultsE.collisions.size() << std::endl;
     }
