@@ -70,6 +70,10 @@ const std::string& CollisionManager::get_initialization_error() {
     return this->initialization_error_;
 }
 
+const std::size_t CollisionManager::get_num_collisions() {
+    return indexed_collisions_.collisions_.size();
+}
+
 const std::vector<Collision> CollisionManager::search(const Query& query) {
     const std::vector<CollisionProxy*> collision_proxy_results = searchOpenMp(query);
 
