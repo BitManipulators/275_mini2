@@ -141,9 +141,16 @@ target_link_libraries(
     cm_grpc_proto
 )
 
+add_library(
+    shared_memory_manager
+    bakery_mutex.cpp
+    shared_memory.cpp
+    shared_memory_manager.cpp
+)
+
 # Targets greeter_[async_](client|server)
 foreach(_target
-  async_server sync_server client
+  async_server async_shm_server sync_server client
   )
   add_executable(${_target} "${_target}.cpp")
   target_link_libraries(${_target}
@@ -155,6 +162,7 @@ foreach(_target
     collision_proto_converters
     collision_query_service_impl
     collision_manager
+    shared_memory_manager
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF})
