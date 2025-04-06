@@ -2,22 +2,29 @@
 
 #include "collision_parser.hpp"
 #include "query.hpp"
+#include "../myconfig.hpp"
 #include <fstream>
 #include <cstring>
 #include <string>
 
 #include <omp.h>
 
+
+
+
 CollisionManager::CollisionManager(const std::string& filename) {
     CollisionParser parser{filename};
 
     try {
-        int rank = -1;
-        if (const char *env_rank = std::getenv("RANK"))
-        {
-            rank = std::atoi(env_rank);
-        }
+        
+        
+        MyConfig*  myconfig = MyConfig::getInstance();
+       
+        
+        int rank = myconfig->getRank() ;
 
+        std::cout << "Collision Manager Rank - " << rank << std::endl;
+        
         if (rank == -1) {
             Collisions collisions = parser.parse();
             this->indexed_collisions_ = IndexedCollisions(collisions);
@@ -27,12 +34,8 @@ CollisionManager::CollisionManager(const std::string& filename) {
 
         int totalRecords = parser.getTotalRecords();
 
-        int totalPartitions = 5;
-        if (const char *env_total = std::getenv("TOTAL_PARTITIONS"))
-        {
-            totalPartitions = std::atoi(env_total);
-        }
-
+        int totalPartitions = myconfig->getTotalNumberofProcess();
+        
         int partitionSize = totalRecords / totalPartitions;
         int start_index = rank * partitionSize;
         int end_index = (rank == totalPartitions - 1) ? totalRecords : (start_index + partitionSize);

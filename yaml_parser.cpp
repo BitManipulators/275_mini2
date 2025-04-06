@@ -43,3 +43,9 @@ int Config::getPortNumber(int rank){
 
 }
 
+int Config::getTotalWorkers(){
+
+    std::cout << "Total Workers - " << total_partitions << std::endl;
+    return total_partitions;
+}
+

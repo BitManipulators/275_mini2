@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <yaml-cpp/yaml.h>
+#include <filesystem> 
 
 // Structure to represent the logical neighbor
 struct Neighbor {
@@ -25,6 +26,11 @@ class Config {
         
         Config(const std::string& filename){
             
+            if (!std::filesystem::exists(filename)) {
+                std::cerr << "Config file not found: " << filename << std::endl;
+                throw std::runtime_error("Config file not found");
+            }
+
             // Load the YAML file
             YAML::Node configNode = YAML::LoadFile(filename);
 
@@ -38,6 +44,7 @@ class Config {
 
             // Parse processes section
             for (const auto& processNode : configNode["processes"]) {
+                
                 Process process;
                 process.rank = processNode.second["rank"].as<int>();
                 process.port = processNode.second["port"].as<int>();
@@ -59,6 +66,7 @@ class Config {
         void print_config ();
         std::vector<std::string> get_logical_neighbors (int rank);
         int getPortNumber(int rank);
+        int getTotalWorkers();
 
         private :
         

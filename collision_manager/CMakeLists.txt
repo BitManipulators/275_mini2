@@ -1,7 +1,8 @@
 project(collision_manager)
 
-add_library(collision_manager query.cpp collision.cpp collision_parser.cpp collision_manager.cpp)
-target_link_libraries(collision_manager PUBLIC OpenMP::OpenMP_CXX)
+add_library(collision_manager query.cpp collision.cpp collision_parser.cpp collision_manager.cpp ../myconfig.cpp ../yaml_parser.cpp)
+target_link_libraries(collision_manager PUBLIC OpenMP::OpenMP_CXX yaml-cpp)
+
 
 add_executable(main main.cpp)
 target_link_libraries(main collision_manager)
