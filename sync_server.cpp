@@ -1,7 +1,7 @@
 #include "collision_manager/collision_manager.hpp"
 #include "collision_proto_converter.hpp"
 #include "query_proto_converter.hpp"
-#include "yaml_parser.hpp"
+#include "myconfig.hpp"
 #include <omp.h>
 #include <grpcpp/grpcpp.h>
 #include <future>
@@ -16,12 +16,8 @@ const std::string CSV_FILE = std::string("/home/suriya-018231499/cpp_projects/pa
 
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
-std::string NET_CONFIG_FILE = "../new-config.yaml";
-static std::unique_ptr<Config> network_config = std::make_unique<Config>(NET_CONFIG_FILE);
-
 std::mutex queryMutex;
 std::unordered_set<int> processedQueries;
-
 std::atomic<int> counter(0);
 
 
@@ -58,17 +54,15 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
     
     public:
         
-        std::vector<std::string> peer_addresses_;
-        CollisionQueryServiceImpl(const std::vector<std::string>& peers) : peer_addresses_(peers) {}
+        CollisionQueryServiceImpl(int r, const std::vector<std::string>& peers) : rank(r), peer_addresses_(peers) {}
+        
         
         grpc::Status GetCollisions(grpc::ServerContext* context,
                                 const collision_proto::QueryRequest* request,
                                 collision_proto::QueryResponse* response) override {
 
-            // Get the rank of the current process.
-            const char* rankEnv = std::getenv("RANK");
-            int rank = rankEnv ? std::stoi(rankEnv) : 0;
-
+            
+            
             QueryRequest query_request = QueryProtoConverter::deserialize(*request);
 
             if (rank == 0){
@@ -101,7 +95,7 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
 
             
             collision_proto::QueryRequest forward_request = QueryProtoConverter::serialize(query_request);
-            for (const auto& neighbour : network_config->get_logical_neighbors(rank)){
+            for (const auto& neighbour : peer_addresses_){
                 
                 QueryResponse results = queryPeer(neighbour, forward_request);
                 aggregatedResults.insert(aggregatedResults.end(), results.collisions.begin(), results.collisions.end());
@@ -126,15 +120,30 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
             return grpc::Status::OK;
         }
 
+    
+    private :
+        std::vector<std::string> peer_addresses_;   
+        int rank; 
+
 
 };
 
 
-void RunServer(const int port, const std::vector<std::string>& peerAddresses) {
+void RunServer() {
 
+    
+    MyConfig*  myconfig = MyConfig::getInstance();
+    int port = myconfig->getPortNumber();
+    
+    std::cout << "My Info Rank - " << myconfig->getRank() << " PORT - " << myconfig->getPortNumber() << std::endl ;
+    
     std::string myaddress = "127.0.0.1:" + std::to_string(port);
     
-    CollisionQueryServiceImpl service(peerAddresses);
+    for (const auto& n : myconfig->getLogicalNeighbors()){
+        std::cout << "Neighbor - " << n << std::endl;
+    }
+
+    CollisionQueryServiceImpl service(myconfig->getRank(), myconfig->getLogicalNeighbors());
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(myaddress, grpc::InsecureServerCredentials());
@@ -148,23 +157,7 @@ void RunServer(const int port, const std::vector<std::string>& peerAddresses) {
 }
 
 int main(int argc, char *argv[]) {
-   
-    const char *rankEnv = std::getenv("RANK");
-    if (!rankEnv) {
-        std::cerr << "RANK environment variable not set!" << std::endl;
-        return 1;
-    }
     
-    int rank = std::stoi(rankEnv);
-    std::vector<std::string> peerAddresses = network_config->get_logical_neighbors(rank);
-
-     
-    for (const auto& add : peerAddresses){
-        std::cout << "Neighbor Address " << add  << std::endl ;
-    }
-
-    RunServer(network_config->getPortNumber(rank), peerAddresses);
-
-
+    RunServer();
     return 0;
 }
