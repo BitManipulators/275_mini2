@@ -1,0 +1,51 @@
+---
+# Distributed System Configuration for gRPC Communication
+
+global:
+  total_partitions: 5
+
+deployment:
+  name: "distributed-grpc-system"
+  version: "1.0.0"
+  description: "Multi-process deployment with gRPC communication for collision data processing"
+
+processes:
+  process_a:
+    rank : 0
+    port: 50051
+    logical_neighbors :
+    - ip : 127.0.0.1
+      port : 50052
+  
+  process_b:
+    rank : 1
+    port: 50052
+    logical_neighbors :
+    - ip : 127.0.0.1
+      port : 50053
+    - ip : 127.0.0.1
+      port : 50054
+
+  process_c:
+    rank : 2
+    port: 50053
+    logical_neighbors :
+    - ip : 127.0.0.1
+      port : 50055
+    
+  process_c:
+    rank : 3
+    port: 50054
+    logical_neighbors :
+    - ip : 127.0.0.1
+      port : 50055
+
+  process_c:
+    rank : 4
+    port: 50055
+    logical_neighbors :    
+  
+    
+    
+
+  
