@@ -7,7 +7,8 @@
 MyConfig* MyConfig::instance = nullptr;
 std::mutex MyConfig::mtx;
 
-std::filesystem::path MyConfig::path = "../config/new-config.yaml";  
+
+//std::filesystem::path MyConfig::path = "../config/new-config.yaml";  
 
 MyConfig* MyConfig::getInstance(){
 
@@ -32,8 +33,7 @@ MyConfig* MyConfig::getInstance(){
 
 }
 
-MyConfig::MyConfig(int n): config(path){
-    std::cout << "Path "<< path << std::endl;
+MyConfig::MyConfig(int n){
     rank = n;
             
 }

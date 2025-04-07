@@ -17,14 +17,9 @@ CollisionManager::CollisionManager(const std::string& filename) {
 
     try {
         
-        
         MyConfig*  myconfig = MyConfig::getInstance();
-       
-        
         int rank = myconfig->getRank() ;
 
-        std::cout << "Collision Manager Rank - " << rank << std::endl;
-        
         if (rank == -1) {
             Collisions collisions = parser.parse();
             this->indexed_collisions_ = IndexedCollisions(collisions);

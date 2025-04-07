@@ -25,12 +25,14 @@ class Config {
     
     public :
         
-        Config(std::filesystem::path filepath){
+        Config(){
+            
+            std::filesystem::path filepath = "../config/new-config.yaml";
             
             if (!std::filesystem::exists(filepath)) {
                 
                 //Debug how it is being called before getInstance
-                //std::cerr << "Config file not found: " << filepath << std::endl;
+                std::cerr << "Config file not found: " << filepath << std::endl;
                 throw std::runtime_error("Config file not found");
             }
 
