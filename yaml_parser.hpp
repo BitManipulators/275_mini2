@@ -49,6 +49,7 @@ class Config {
             version = configNode["deployment"]["version"].as<std::string>();
             description = configNode["deployment"]["description"].as<std::string>();
 
+            int numberofworker = 0;
             // Parse processes section
             for (const auto& processNode : configNode["processes"]) {
                 
@@ -65,6 +66,11 @@ class Config {
                 }
 
                 processes[process.rank] = process ;
+                numberofworker++;
+            }
+
+            if (total_partitions != numberofworker){
+                throw std::runtime_error("Incorrect Config file");
             }
 
 

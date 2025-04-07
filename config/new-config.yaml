@@ -33,14 +33,14 @@ processes:
     - ip : 127.0.0.1
       port : 50055
     
-  process_c:
+  process_d:
     rank : 3
     port: 50054
     logical_neighbors :
     - ip : 127.0.0.1
       port : 50055
 
-  process_c:
+  process_e:
     rank : 4
     port: 50055
     logical_neighbors :    
