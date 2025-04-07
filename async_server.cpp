@@ -3,6 +3,7 @@
 #include "query_proto_converter.hpp"
 #include "ring_buffer.hpp"
 #include "yaml_parser.hpp"
+#include "myconfig.hpp"
 
 #include "collision_manager/collision_manager.hpp"
 
@@ -241,7 +242,8 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
 }
 
 int main(int argc, char** argv) {
-    DeploymentConfig config = parseConfig("../config.yaml");
+    
+    /*DeploymentConfig config = parseConfig("../config.yaml");
 
     const char *rankEnv = std::getenv("RANK");
     if (!rankEnv) {
@@ -257,7 +259,11 @@ int main(int argc, char** argv) {
     std::cout << "Peer addresses:" << std::endl;
     for (const auto &addr : peerAddresses) {
         std::cout << "  " << addr << std::endl;
-    }
+    }*/
+
+    MyConfig*  myconfig = MyConfig::getInstance();
+
+    rank = myconfig->getRank();
 
     CollisionQueryServiceImpl service{rank,
                                       pendingRequestsMutex,

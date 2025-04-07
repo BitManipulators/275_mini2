@@ -4,6 +4,7 @@
 #include "ring_buffer.hpp"
 #include "shared_memory_manager.hpp"
 #include "yaml_parser.hpp"
+#include "myconfig.hpp"
 
 #include "collision_manager/collision_manager.hpp"
 
@@ -353,7 +354,7 @@ int main(int argc, char** argv) {
 //    signal(SIGABRT, handle_signal);
 //    signal(SIGSEGV, handle_signal);
 
-    DeploymentConfig config = parseConfig("../config.yaml");
+    /*DeploymentConfig config = parseConfig("../config.yaml");
 
     const char *rankEnv = std::getenv("RANK");
     if (!rankEnv) {
@@ -369,7 +370,10 @@ int main(int argc, char** argv) {
     std::cout << "Peer addresses:" << std::endl;
     for (const auto &addr : peerAddresses) {
         std::cout << "  " << addr << std::endl;
-    }
+    } */
+
+    MyConfig*  myconfig = MyConfig::getInstance();
+    rank = myconfig->getRank();
 
     // TODO: Use config.yaml
     ranks_on_same_machine = {0, 1, 2, 3, 4};
@@ -392,7 +396,7 @@ int main(int argc, char** argv) {
     {
         // Process D: query Process E.
         child_ranks = {4};
-    }
+    } 
 
     std::size_t max_num_collisions_each_rank = static_cast<std::size_t>(5 * std::ceil(static_cast<double>(
         collision_manager->get_num_collisions()) / 5));
