@@ -5,9 +5,9 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <filesystem>
+
 #include "yaml_parser.hpp"
-
-
 
 class MyConfig {
 
@@ -17,6 +17,7 @@ class MyConfig {
         std::vector<std::string> getLogicalNeighbors();
         int getTotalNumberofProcess();
         int getPortNumber();
+        
 
     private :
         
@@ -24,11 +25,9 @@ class MyConfig {
         static std::mutex mtx;
         static MyConfig* instance;
         Config config;
+        static std::filesystem::path path; 
+        MyConfig (int n);
         
-        MyConfig(int n): config("/home/suriya-018231499/sem2/cmpe275/mini2/main/275_mini2/new-config.yaml"){
-            rank = n;
-            
-        }
 
 };
 

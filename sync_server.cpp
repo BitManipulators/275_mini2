@@ -132,6 +132,7 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
 void RunServer() {
 
     
+    
     MyConfig*  myconfig = MyConfig::getInstance();
     int port = myconfig->getPortNumber();
     

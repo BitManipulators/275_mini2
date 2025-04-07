@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CONFIG_HPP
+#define CONFIG_HPP
 
 #include <string>
 #include <map>
@@ -24,15 +25,19 @@ class Config {
     
     public :
         
-        Config(const std::string& filename){
+        Config(std::filesystem::path filepath){
             
-            if (!std::filesystem::exists(filename)) {
-                std::cerr << "Config file not found: " << filename << std::endl;
+            if (!std::filesystem::exists(filepath)) {
+                
+                //Debug how it is being called before getInstance
+                //std::cerr << "Config file not found: " << filepath << std::endl;
                 throw std::runtime_error("Config file not found");
             }
 
+            //std::cout << "Called config" << std::endl;
+
             // Load the YAML file
-            YAML::Node configNode = YAML::LoadFile(filename);
+            YAML::Node configNode = YAML::LoadFile(filepath);
 
             // Parse global section
             total_partitions = configNode["global"]["total_partitions"].as<int>();
@@ -77,6 +82,6 @@ class Config {
                 std::map<int, Process> processes;
 };
 
-
+#endif
 
 
