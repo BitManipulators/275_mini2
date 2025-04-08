@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 const std::size_t MAX_INITIALIZING_WAIT_SECONDS = 30;
+const std::size_t MAX_FREE_LIST_ALLOCATION_WAIT_SECONDS = 10;
 
 SharedMemoryManager::SharedMemoryManager(const std::uint64_t rank, const std::size_t block_size)
   : rank_{rank}
@@ -194,13 +195,35 @@ void SharedMemoryManager::send_results(const std::size_t parent_rank, const Quer
     }
 
     // Wait until able to allocate a free list block
+    auto start = std::chrono::steady_clock::now();
+
     uint8_t* result_data_ptr = nullptr;
-    {
-        BakeryMutexGuard guard(shared_memory_global_data_->free_list_global_mutex, rank_);
-        result_data_ptr = shared_memory_global_data_->memory_blocks_free_list.allocate(free_list_memory_pool_);
+    while (result_data_ptr == nullptr) {
+        auto now = std::chrono::steady_clock::now();
+
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - start);
+        if (duration.count() >= MAX_FREE_LIST_ALLOCATION_WAIT_SECONDS) {
+            std::cerr << std::format("{}: Timed out while waiting for free list allocation.", rank_)
+                      << std::endl;
+            std::cerr << std::format("{}: Start: {}, Now: {}",
+                                     rank_,
+                                     std::chrono::duration_cast<std::chrono::seconds>(start.time_since_epoch()),
+                                     std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()))
+                      << std::endl;
+            exit(1);
+        }
+
+        {
+            BakeryMutexGuard guard(shared_memory_global_data_->free_list_global_mutex, rank_);
+            result_data_ptr = shared_memory_global_data_->memory_blocks_free_list.allocate(free_list_memory_pool_);
+            if (result_data_ptr != nullptr) {
+                break;
+            }
+        }
     }
 
     if (result_data_ptr == nullptr) {
+        // Should never happen
         std::cerr << std::format("{}: Could not allocate block from free list for result!", rank_)
                   << std::endl;
         shared_memory_control_flags_->stop_requested = true;
