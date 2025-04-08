@@ -43,6 +43,12 @@ int Config::getPortNumber(int rank){
 
 }
 
+std::string Config::getaddress(int rank){
+
+    return processes[rank].ip + ":" + std::to_string(processes[rank].port);
+
+}
+
 int Config::getTotalWorkers(){
 
     std::cout << "Total Workers - " << total_partitions << std::endl;

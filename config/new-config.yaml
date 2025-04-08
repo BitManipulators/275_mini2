@@ -13,6 +13,7 @@ processes:
   process_a:
     rank : 0
     port: 50051
+    ip: 127.0.0.1
     logical_neighbors :
     - ip : 127.0.0.1
       port : 50052
@@ -20,6 +21,7 @@ processes:
   process_b:
     rank : 1
     port: 50052
+    ip: 127.0.0.1
     logical_neighbors :
     - ip : 127.0.0.1
       port : 50053
@@ -29,6 +31,7 @@ processes:
   process_c:
     rank : 2
     port: 50053
+    ip: 127.0.0.1
     logical_neighbors :
     - ip : 127.0.0.1
       port : 50055
@@ -36,6 +39,7 @@ processes:
   process_d:
     rank : 3
     port: 50054
+    ip: 127.0.0.1
     logical_neighbors :
     - ip : 127.0.0.1
       port : 50055
@@ -43,6 +47,7 @@ processes:
   process_e:
     rank : 4
     port: 50055
+    ip: 127.0.0.1
     logical_neighbors :    
   
     

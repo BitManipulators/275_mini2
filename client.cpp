@@ -67,7 +67,7 @@ int main(){
 
     std::chrono::duration<double> duration = end - start ;
 
-    std::cout << "Elaped Time : " << duration.count() << "seconds" << std::endl;
+    std::cout << "Elasped Time : " << duration.count() << "seconds" << std::endl;
 
     return 0;
 }

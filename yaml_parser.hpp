@@ -17,6 +17,7 @@ struct Neighbor {
 struct Process {
     int rank;
     int port;
+    std::string ip;
     std::vector<Neighbor> logical_neighbors;
 };
 
@@ -56,6 +57,7 @@ class Config {
                 Process process;
                 process.rank = processNode.second["rank"].as<int>();
                 process.port = processNode.second["port"].as<int>();
+                process.ip = processNode.second["ip"].as<std::string>();
 
                 // Parse logical neighbors
                 for (const auto& neighborNode : processNode.second["logical_neighbors"]) {
@@ -80,6 +82,7 @@ class Config {
         std::vector<std::string> get_logical_neighbors (int rank);
         int getPortNumber(int rank);
         int getTotalWorkers();
+        std::string getaddress(int rank);
 
         private :
         
