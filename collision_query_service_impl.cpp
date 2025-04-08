@@ -13,7 +13,29 @@
 #include <google/protobuf/empty.pb.h>
 
 std::atomic<std::size_t> requestCounter = 1;
-std::size_t latestQueryID = 0;
+Ringbuffer<std::size_t, 100> latestQueryIDs = {};
+
+bool isDuplicateQueryID(const std::size_t query_id) {
+    if (latestQueryIDs.is_empty()) {
+        return false;
+    }
+
+    for (auto it = latestQueryIDs.begin(); it != latestQueryIDs.end(); ++it) {
+        if (*it == query_id) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void appendQueryID(const std::size_t query_id) {
+    if (latestQueryIDs.is_full()) {
+        latestQueryIDs.pop();
+    }
+
+    latestQueryIDs.push(query_id);
+}
 
 CollisionQueryServiceImpl::CollisionQueryServiceImpl(
     std::uint32_t rank,
@@ -199,8 +221,8 @@ void SendRequestCallData::Proceed(bool ok) {
 
         {
             std::lock_guard<std::mutex> lock(pending_requests_mutex_);
-            if (latestQueryID < query_request.id) {
-                latestQueryID = query_request.id;
+            if (!isDuplicateQueryID(query_request.id)) {
+                appendQueryID(query_request.id);
                 pending_requests_.push(query_request);
                 pending_requests_cv_.notify_one();
 
