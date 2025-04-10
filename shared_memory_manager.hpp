@@ -58,6 +58,7 @@ public:
 
     bool has_results();
     SharedMemoryQueryResponse&& pop_result();
+    BakeryMutex& get_lock(std::uint32_t rank);
     QueryResponse deserialize(SharedMemoryQueryResponse& shared_memory_query_response);
     void send_results(const std::size_t parent_rank, SharedMemoryQueryResponse& shared_memory_query_response);
     void send_results(const std::size_t parent_rank, const QueryResponse& query_response);

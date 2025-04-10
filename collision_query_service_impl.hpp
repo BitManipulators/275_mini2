@@ -50,18 +50,28 @@ struct GetCollisionsClientRequest {
     CallDataBase* call_data_base;
 };
 
+struct StreamCollisionsClientRequest {
+    std::mutex write_mutex;
+    std::vector<uint32_t> ranks;
+    CallDataBase* call_data_base;
+
+    StreamCollisionsClientRequest(CallDataBase* call_data_base_ptr)
+      : call_data_base(call_data_base_ptr) {}
+};
 
 class CollisionQueryServiceImpl final : public collision_proto::CollisionQueryService::AsyncService {
 public:
     CollisionQueryServiceImpl(
         std::uint32_t rank,
         std::mutex& pending_requests_mutex,
+        std::mutex& pending_client_requests_mutex,
         std::mutex& pending_responses_mutex,
         PendingRequestsRingbuffer& pending_requests,
         PendingResponsesRingbuffer& pending_responses,
         std::condition_variable& pending_requests_cv,
         std::condition_variable& pending_responses_cv,
-        std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map);
+        std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map,
+        std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map);
     ~CollisionQueryServiceImpl();
 
     void Run(const std::string server_address);
@@ -74,12 +84,14 @@ private:
     std::unique_ptr<grpc::ServerCompletionQueue> cq_;
 
     std::mutex& pending_requests_mutex_;
+    std::mutex& pending_client_requests_mutex_;
     std::mutex& pending_responses_mutex_;
     PendingRequestsRingbuffer& pending_requests_;
     PendingResponsesRingbuffer& pending_responses_;
     std::condition_variable& pending_requests_cv_;
     std::condition_variable& pending_responses_cv_;
     std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map_;
+    std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map_;
 };
 
 
@@ -89,6 +101,7 @@ public:
                           ServerCompletionQueue* cq,
                           std::uint32_t rank,
                           std::mutex& pending_requests_mutex,
+                          std::mutex& pending_client_requests_mutex,
                           PendingRequestsRingbuffer& pending_requests,
                           std::condition_variable& pending_requests_cv,
                           std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map);
@@ -107,9 +120,58 @@ private:
     CallStatus status_;
     std::uint32_t rank_;
     std::mutex& pending_requests_mutex_;
+    std::mutex& pending_client_requests_mutex_;
     PendingRequestsRingbuffer& pending_requests_;
     std::condition_variable& pending_requests_cv_;
     std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map_;
+};
+
+
+class StreamCollisionsCallData : public CallDataBase {
+public:
+    StreamCollisionsCallData(CollisionQueryServiceImpl* service,
+                             ServerCompletionQueue* cq,
+                             std::uint32_t rank,
+                             std::mutex& pending_requests_mutex,
+                             std::mutex& pending_client_requests_mutex,
+                             PendingRequestsRingbuffer& pending_requests,
+                             std::condition_variable& pending_requests_cv,
+                             std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map);
+
+    void Proceed(bool ok) override;
+    void Write(const std::size_t id,
+               const std::uint32_t results_from,
+               const std::vector<Collision>& collisions,
+               std::unique_lock<std::mutex>&& write_lock);
+    void Finish(const std::size_t id);
+
+private:
+    CollisionQueryServiceImpl* service_;
+    ServerCompletionQueue* cq_;
+    ServerContext ctx_;
+    collision_proto::QueryRequest request_;
+    ServerAsyncWriter<collision_proto::QueryResponse> responder_;
+    enum CallStatus { CREATE, PROCESS, FINISH };
+    CallStatus status_;
+    std::uint32_t rank_;
+    std::mutex& pending_requests_mutex_;
+    std::mutex& pending_client_requests_mutex_;
+    PendingRequestsRingbuffer& pending_requests_;
+    std::condition_variable& pending_requests_cv_;
+    std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map_;
+};
+
+
+class StreamCollisionsWriteTagCallData : public CallDataBase {
+public:
+    StreamCollisionsWriteTagCallData(std::size_t id, std::uint32_t results_from, std::unique_lock<std::mutex>&& lock);
+
+    void Proceed(bool ok) override;
+
+private:
+    std::size_t id_;
+    std::uint32_t results_from_;
+    std::unique_lock<std::mutex> lock_;
 };
 
 

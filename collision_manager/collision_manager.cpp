@@ -86,7 +86,7 @@ const std::vector<CollisionProxy*> CollisionManager::searchOpenMp(const Query& q
     const std::vector<FieldQuery>& field_queries = query.get();
     std::vector<CollisionProxy*> results;
 
-    unsigned long num_threads = omp_get_max_threads();
+    unsigned long num_threads = 1;
     std::vector<std::vector<CollisionProxy*>> thread_local_results(num_threads);
 
     // Initialize all matches to true initialially
@@ -94,7 +94,7 @@ const std::vector<CollisionProxy*> CollisionManager::searchOpenMp(const Query& q
     std::span matches = {matches_data, indexed_collisions_.collisions_.size()};
     memset(matches.data(), 1, matches.size());
 
-    #pragma omp parallel
+    #pragma omp parallel num_threads(1)
     {
         int thread_id = omp_get_thread_num();
         int num_threads = omp_get_num_threads();

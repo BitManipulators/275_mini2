@@ -26,6 +26,7 @@ struct Ringbuffer {
 
         buffer[tail] = data_in;
         tail = (tail + 1) % capacity;
+        asm volatile("" ::: "memory");
         size++;
     }
 
@@ -36,6 +37,7 @@ struct Ringbuffer {
 
         T& t = buffer[head];
         head = (head + 1) % capacity;
+        asm volatile("" ::: "memory");
         size--;
         return std::move(t);
     }
@@ -53,9 +55,10 @@ struct Ringbuffer {
     private:
         Ringbuffer* rb;
         size_t index;
+        size_t count;
 
     public:
-        Iterator(Ringbuffer* buffer, size_t idx) : rb(buffer), index(idx) {}
+        Iterator(Ringbuffer* buffer, size_t idx, size_t cnt) : rb(buffer), index(idx), count(cnt) {}
 
         // Dereference operator
         T& operator*() {
@@ -65,27 +68,28 @@ struct Ringbuffer {
         // Increment operator (wraps around if needed)
         Iterator& operator++() {
             index = (index + 1) % capacity;
+            ++count;
             return *this;
         }
 
         // Equality operator
         bool operator!=(const Iterator& other) const {
-            return index != other.index;
+            return index != other.index || count != other.count;
         }
 
         // Equality operator (for end comparison)
         bool operator==(const Iterator& other) const {
-            return index == other.index;
+            return index == other.index && count == other.count;
         }
     };
 
     // Begin iterator
     Iterator begin() {
-        return Iterator(this, head);
+        return Iterator(this, head, 0);
     }
 
     // End iterator (points to one past the last element)
     Iterator end() {
-        return Iterator(this, tail);
+        return Iterator(this, tail, size);
     }
 };

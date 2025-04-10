@@ -9,7 +9,8 @@
 
 using google::protobuf::Empty;
 int MASTER = 0;
-void RunClient() {
+
+void RunClient(bool stream) {
 
     Config config;
     // Set Master process IP
@@ -31,50 +32,56 @@ void RunClient() {
     collision_proto::QueryResponse response;
     grpc::ClientContext context;
 
-    grpc::Status status = stub->GetCollisions(&context, request, &response);
+    std::cout << "Sending query" << std::endl;
 
-    std::cout << "Sent query" << std::endl;
+    std::vector<Collision> collisions{};
+
+    grpc::Status status;
+    if (stream) {
+        std::unique_ptr<grpc::ClientReader<collision_proto::QueryResponse>> reader(stub->StreamCollisions(&context, request));
+
+        std::size_t total_collision_size = 0;
+        std::size_t num_responses = 0;
+        while (reader->Read(&response)) {
+            QueryResponse query_response = CollisionProtoConverter::deserialize(response);
+            collisions.insert(collisions.end(), query_response.collisions.begin(), query_response.collisions.end());
+
+            std::cout << "Received streaming response number: " << num_responses << std::endl;
+            ++num_responses;
+        }
+
+        status = reader->Finish();
+    } else {
+        status = stub->GetCollisions(&context, request, &response);
+
+        QueryResponse query_response = CollisionProtoConverter::deserialize(response);
+        collisions.insert(collisions.end(), query_response.collisions.begin(), query_response.collisions.end());
+    }
 
     if (status.ok()) {
-
-        std::cout << "Collision size "<< response.collision_size() << std::endl;
-
-        //for (const collision_proto::Collision& collision  : response.collision()) {
-
-            //std::cout << "Name : " << collision.borough() << " Zip_code : " << collision.zip_code() << std::endl;
-        //}
-
+        std::cout << "Collision size "<< collisions.size() << std::endl;
+/*
+        for (const Collision& collision  : collisions) {
+            std::cout << "Name : " << collision.borough.value().c_str() << " Zip_code : " << collision.zip_code.value() << std::endl;
+        }
+*/
     } else {
-    std::cerr << "RPC Error: " << status.error_code() << ": " << status.error_message()
-              << " (" << status.error_details() << ")" << std::endl;
+        std::cerr << "RPC Error: " << status.error_code() << ": " << status.error_message()
+                  << " (" << status.error_details() << ")" << std::endl;
     }
 }
 
-int main(){
-    
-    RunClient();
-    
-    /* auto start = std::chrono::high_resolution_clock::now();
-    
-    const int numThreads = 5;
-    std::thread threads[numThreads];
+int main(int argc, char *argv[]) {
+    bool stream = false;
 
-    for (int i = 0; i < numThreads ; i++){
-        threads[i] = std::thread(RunClient);
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--stream") {
+            stream = true;
+            break; // Found it, no need to continue
+        }
     }
 
-    for (int i = 0; i < numThreads ; i++){
-        threads[i].join();
-    }
-
-    //std::thread t(RunClient);
-    //t.join();
-
-    auto end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double> duration = end - start ;
-
-    std::cout << "Elasped Time : " << duration.count() << "seconds" << std::endl; */
-
+    RunClient(stream);
     return 0;
 }

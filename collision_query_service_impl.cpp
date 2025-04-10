@@ -40,20 +40,24 @@ void appendQueryID(const std::size_t query_id) {
 CollisionQueryServiceImpl::CollisionQueryServiceImpl(
     std::uint32_t rank,
     std::mutex& pending_requests_mutex,
+    std::mutex& pending_client_requests_mutex,
     std::mutex& pending_responses_mutex,
     PendingRequestsRingbuffer& pending_requests,
     PendingResponsesRingbuffer& pending_responses,
     std::condition_variable& pending_requests_cv,
     std::condition_variable& pending_responses_cv,
-    std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map)
+    std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map,
+    std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map)
     : rank_{rank}
     , pending_requests_mutex_{pending_requests_mutex}
+    , pending_client_requests_mutex_{pending_client_requests_mutex}
     , pending_responses_mutex_{pending_responses_mutex}
     , pending_requests_{pending_requests}
     , pending_responses_{pending_responses}
     , pending_requests_cv_{pending_requests_cv}
     , pending_responses_cv_{pending_responses_cv}
-    , pending_client_requests_map_{pending_client_requests_map} {}
+    , pending_client_requests_map_{pending_client_requests_map}
+    , pending_stream_requests_map_{pending_stream_requests_map} {}
 
 CollisionQueryServiceImpl::~CollisionQueryServiceImpl() {
     server_->Shutdown();
@@ -92,9 +96,18 @@ void CollisionQueryServiceImpl::HandleRpcs() {
                                   cq_.get(),
                                   rank_,
                                   pending_requests_mutex_,
+                                  pending_client_requests_mutex_,
                                   pending_requests_,
                                   pending_requests_cv_,
                                   pending_client_requests_map_);
+        new StreamCollisionsCallData(this,
+                                     cq_.get(),
+                                     rank_,
+                                     pending_requests_mutex_,
+                                     pending_client_requests_mutex_,
+                                     pending_requests_,
+                                     pending_requests_cv_,
+                                     pending_stream_requests_map_);
     }
 
     void* tag;
@@ -111,6 +124,7 @@ GetCollisionsCallData::GetCollisionsCallData(
     ServerCompletionQueue* cq,
     std::uint32_t rank,
     std::mutex& pending_requests_mutex,
+    std::mutex& pending_client_requests_mutex,
     PendingRequestsRingbuffer& pending_requests,
     std::condition_variable& pending_requests_cv,
     std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map)
@@ -120,6 +134,7 @@ GetCollisionsCallData::GetCollisionsCallData(
     , status_(CREATE)
     , rank_(rank)
     , pending_requests_mutex_(pending_requests_mutex)
+    , pending_client_requests_mutex_(pending_client_requests_mutex)
     , pending_requests_(pending_requests)
     , pending_requests_cv_(pending_requests_cv)
     , pending_client_requests_map_(pending_client_requests_map)
@@ -132,12 +147,12 @@ void GetCollisionsCallData::Proceed(bool ok) {
         status_ = PROCESS;
         service_->RequestGetCollisions(&ctx_, &request_, &responder_, cq_, cq_, this);
     } else if (status_ == PROCESS) {
-        new GetCollisionsCallData(service_, cq_, rank_, pending_requests_mutex_, pending_requests_, pending_requests_cv_, pending_client_requests_map_);
+        new GetCollisionsCallData(service_, cq_, rank_, pending_requests_mutex_, pending_client_requests_mutex_, pending_requests_, pending_requests_cv_, pending_client_requests_map_);
 
         QueryRequest query_request = QueryProtoConverter::deserialize(request_);
 
         {
-            std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+            std::lock_guard<std::mutex> pending_client_requests_lock(pending_client_requests_mutex_);
 
             query_request.id = requestCounter.fetch_add(1);
 
@@ -165,6 +180,7 @@ void GetCollisionsCallData::Proceed(bool ok) {
                 return;
             }
 
+            std::lock_guard<std::mutex> pending_requests_lock(pending_requests_mutex_);
             pending_requests_.push(query_request);
             pending_requests_cv_.notify_one();
         }
@@ -192,6 +208,109 @@ void GetCollisionsCallData::CompleteRequest(const std::size_t id,
     responder_.Finish(response, Status::OK, this);
 }
 
+StreamCollisionsCallData::StreamCollisionsCallData(
+    CollisionQueryServiceImpl* service,
+    ServerCompletionQueue* cq,
+    std::uint32_t rank,
+    std::mutex& pending_requests_mutex,
+    std::mutex& pending_client_requests_mutex,
+    PendingRequestsRingbuffer& pending_requests,
+    std::condition_variable& pending_requests_cv,
+    std::unordered_map<std::size_t, StreamCollisionsClientRequest>& pending_stream_requests_map)
+    : service_(service)
+    , cq_(cq)
+    , responder_(&ctx_)
+    , status_(CREATE)
+    , rank_(rank)
+    , pending_requests_mutex_(pending_requests_mutex)
+    , pending_client_requests_mutex_(pending_client_requests_mutex)
+    , pending_requests_(pending_requests)
+    , pending_requests_cv_(pending_requests_cv)
+    , pending_stream_requests_map_(pending_stream_requests_map)
+{
+    Proceed(true);
+}
+
+void StreamCollisionsCallData::Proceed(bool ok) {
+    if (status_ == CREATE) {
+        status_ = PROCESS;
+        service_->RequestStreamCollisions(&ctx_, &request_, &responder_, cq_, cq_, this);
+    } else if (status_ == PROCESS) {
+        new StreamCollisionsCallData(service_, cq_, rank_, pending_requests_mutex_, pending_client_requests_mutex_, pending_requests_, pending_requests_cv_, pending_stream_requests_map_);
+
+        QueryRequest query_request = QueryProtoConverter::deserialize(request_);
+
+        {
+            std::lock_guard<std::mutex> pending_client_requests_lock(pending_client_requests_mutex_);
+
+            query_request.id = requestCounter.fetch_add(1);
+
+            auto [it, inserted] = pending_stream_requests_map_.try_emplace(query_request.id, this);
+            if (!inserted) {
+                std::cout << "Request with id: '" << query_request.id << "' already in map!" << std::endl;
+                status_ = FINISH;
+
+                QueryResponse query_response {
+                   .id = query_request.id,
+                   .requested_by = {},
+                   .results_from = rank_,
+                   .collisions = {},
+                };
+
+                collision_proto::QueryResponse response = CollisionProtoConverter::serialize(query_response);
+                void* write_tag = (void*)("write_" + std::to_string(query_request.id) + "_" + std::to_string(rank_)).c_str();
+
+                responder_.Write(response, write_tag);
+
+                responder_.Finish(Status::CANCELLED, this);
+                return;
+            }
+
+            std::lock_guard<std::mutex> pending_requests_lock(pending_requests_mutex_);
+            pending_requests_.push(query_request);
+            pending_requests_cv_.notify_one();
+        }
+
+        std::cout << "Added request from: 'client' with id: '" << query_request.id <<
+                     "' to the pendingRequests queue" << std::endl;
+    } else {
+        assert(status_ == FINISH);
+        delete this;
+    }
+}
+
+void StreamCollisionsCallData::Write(const std::size_t id,
+                                     const std::uint32_t results_from,
+                                     const std::vector<Collision>& collisions,
+                                     std::unique_lock<std::mutex>&& write_lock) {
+    QueryResponse query_response {
+        .id = id,
+        .requested_by = {},
+        .results_from = rank_,
+        .collisions = collisions,
+    };
+
+    collision_proto::QueryResponse response = CollisionProtoConverter::serialize(query_response);
+
+    void* write_tag = (void*) new StreamCollisionsWriteTagCallData(id, results_from, std::move(write_lock));
+
+    responder_.Write(response, write_tag);
+}
+
+void StreamCollisionsCallData::Finish(const std::size_t id) {
+    std::cout << "StreamCollisionsCallData::Finish for: " << id << std::endl;
+    status_ = FINISH;
+    responder_.Finish(Status::OK, this);
+}
+
+StreamCollisionsWriteTagCallData::StreamCollisionsWriteTagCallData(std::size_t id, std::uint32_t results_from, std::unique_lock<std::mutex>&& lock)
+    : id_(id), results_from_(results_from), lock_(std::move(lock)) {}
+
+void StreamCollisionsWriteTagCallData::Proceed(bool ok) {
+    // Release lock via invoking destructor
+    std::cout << "Write completed for id: " << id_ << " from: " << results_from_ << std::endl;
+    delete this;
+}
 
 SendRequestCallData::SendRequestCallData(
     CollisionQueryServiceImpl* service,

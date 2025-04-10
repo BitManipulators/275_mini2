@@ -18,6 +18,8 @@ struct FixedString {
             throw std::runtime_error(error_message);
         }
 
+        // Initialize string to 0's
+        std::memset(data, '\0', sizeof(data));
         // Copy at most N characters from str to data
         std::strncpy(data, str, str_length);
         // Ensure null termination
@@ -35,6 +37,8 @@ struct FixedString {
             throw std::runtime_error(error_message);
         }
 
+        // Initialize string to 0's
+        std::memset(data, '\0', sizeof(data));
         // Copy at most N characters from str to data
         std::strncpy(data, sv.data(), str_length);
         // Ensure null termination
@@ -66,8 +70,10 @@ struct FixedString {
             throw std::runtime_error(error_message);
         }
 
+        // Initialize string to 0's
+        std::memset(data, '\0', sizeof(data));
         // Copy at most N characters from str to data
-        std::strncpy(data, other_str, N);
+        std::strncpy(data, other_str, str_length);
         // Ensure null termination
         data[str_length] = '\0';
         // Calculate and store the actual length of the string
