@@ -26,7 +26,6 @@ class MyConfig {
         static std::mutex mtx;
         static MyConfig* instance;
         Config config;
-        //static std::filesystem::path path; 
         MyConfig (int n);
         
 

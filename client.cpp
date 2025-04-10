@@ -51,9 +51,10 @@ void RunClient() {
 }
 
 int main(){
-    //RunClient();
     
-    auto start = std::chrono::high_resolution_clock::now();
+    RunClient();
+    
+    /* auto start = std::chrono::high_resolution_clock::now();
     
     const int numThreads = 5;
     std::thread threads[numThreads];
@@ -73,7 +74,7 @@ int main(){
 
     std::chrono::duration<double> duration = end - start ;
 
-    std::cout << "Elasped Time : " << duration.count() << "seconds" << std::endl;
+    std::cout << "Elasped Time : " << duration.count() << "seconds" << std::endl; */
 
     return 0;
 }
