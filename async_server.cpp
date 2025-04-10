@@ -3,6 +3,7 @@
 #include "query_proto_converter.hpp"
 #include "ring_buffer.hpp"
 #include "yaml_parser.hpp"
+#include "myconfig.hpp"
 
 #include "collision_manager/collision_manager.hpp"
 
@@ -25,6 +26,8 @@ const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
 std::uint32_t rank;
+MyConfig*  myconfig = MyConfig::getInstance();
+Config config;
 
 std::mutex pendingRequestsMutex{};
 PendingRequestsRingbuffer pendingRequests{};
@@ -114,6 +117,8 @@ QueryResponse wait_for_new_query_response(std::uint32_t id) {
 }
 
 void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
+    
+    
     while (true) {
         QueryRequest query_request = wait_for_new_query_request(id);
         query_request.requested_by.push_back(rank);
@@ -136,9 +141,26 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
                          "' with id: '" << query_response.id << "' to the pendingResponses ringbuffer" << std::endl;
         }
 
-        // TODO: This should just iterate over each children() or something.
+        
 
-        grpc::Status status;
+        grpc::Status status;        
+        
+        for (const auto& neighbour : myconfig->getLogicalNeighbors()){
+                
+                status = queryPeer(neighbour, query_request);
+                if (!status.ok()) {
+                    // TODO
+                    std::cout << "Issue" << std::endl; 
+                }
+                std::cout << "RequestWorker " << id << " has processed query: " << query_request.id << std::endl;
+        }
+        
+    }
+        
+
+        // TODO: This should just iterate over each children() or something.
+        
+        /*grpc::Status status;
         // Query based on overlay:
         if (rank == 0) {
             // Process A: query only Process B.
@@ -176,13 +198,15 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
                 // TODO
             }
         }
-        // Process E (rank 4) does not forward the query further.
-
+        // Process E (rank 4) does not forward the query further.  
         std::cout << "RequestWorker " << id << " has processed query: " << query_request.id << std::endl;
-    }
+    }*/
+
 }
 
 void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank, const QueryResponse& query_response) {
+    
+    
     auto map_it = pendingClientRequestsMap.find(query_response.id);
 
     if (map_it == pendingClientRequestsMap.end()) {
@@ -204,7 +228,7 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
     client_request.ranks.push_back(query_response.results_from);
 
     // TODO: check if all ranks present better using yaml config to find out how many processes exist
-    if (client_request.ranks.size() == 5) {
+    if (client_request.ranks.size() == myconfig->getTotalNumberofProcess()) {
         GetCollisionsCallData* getCollisionsCallData = dynamic_cast<GetCollisionsCallData*>(client_request.call_data_base);
         if (getCollisionsCallData == nullptr) {
             std::cerr << "ResponseWorker " << worker_id << " could not convert call_data_base for client_request with id: "
@@ -218,6 +242,8 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
 }
 
 void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank) {
+
+    
     while (true) {
         QueryResponse query_response = wait_for_new_query_response(worker_id);
 
@@ -229,8 +255,9 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
         }
 
         std::uint32_t parent_rank = *(query_response.requested_by.end() - 2);
-        int parent_port = 50051 + parent_rank;
-        std::string parent_server_address = "127.0.0.1:" + std::to_string(parent_port);
+        //int parent_port = 50051 + parent_rank;
+        //std::string parent_server_address = "127.0.0.1:" + std::to_string(parent_port);
+        std::string parent_server_address = config.getaddress(parent_rank);
 
         std::cout << "Parent server address is: " << parent_server_address << std::endl;
 
@@ -241,23 +268,10 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
 }
 
 int main(int argc, char** argv) {
-    DeploymentConfig config = parseConfig("../config.yaml");
+    
+    
 
-    const char *rankEnv = std::getenv("RANK");
-    if (!rankEnv) {
-        std::cerr << "RANK environment variable not set!" << std::endl;
-        return 1;
-    }
-    rank = std::stoi(rankEnv);
-    std::string selfProcessId = "process_" + std::string(1, 'a' + rank);
-    std::cout << "Self process id: " << selfProcessId << std::endl;
-
-    // Build peer addresses by excluding self.
-    std::vector<std::string> peerAddresses = getPeerAddresses(config, selfProcessId);
-    std::cout << "Peer addresses:" << std::endl;
-    for (const auto &addr : peerAddresses) {
-        std::cout << "  " << addr << std::endl;
-    }
+    rank = myconfig->getRank();
 
     CollisionQueryServiceImpl service{rank,
                                       pendingRequestsMutex,

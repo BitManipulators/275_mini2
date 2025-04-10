@@ -3,12 +3,17 @@
 
 #include <grpcpp/grpcpp.h>
 #include <iostream>
+#include <thread>
+#include <chrono>
+#include "myconfig.hpp"
 
 using google::protobuf::Empty;
-
+int MASTER = 0;
 void RunClient() {
 
-    std::string target_str = "127.0.0.1:50051";
+    Config config;
+    // Set Master process IP
+    std::string target_str = config.getIP(MASTER) + ":" + std::to_string(config.getPortNumber(MASTER));
     std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
     std::unique_ptr<collision_proto::CollisionQueryService::Stub> stub = collision_proto::CollisionQueryService::NewStub(channel);
 
@@ -34,17 +39,42 @@ void RunClient() {
 
         std::cout << "Collision size "<< response.collision_size() << std::endl;
 
-        for (const collision_proto::Collision& collision  : response.collision()) {
+        //for (const collision_proto::Collision& collision  : response.collision()) {
 
-            std::cout << "Name : " << collision.borough() << " Zip_code : " << collision.zip_code() << std::endl;
-        }
+            //std::cout << "Name : " << collision.borough() << " Zip_code : " << collision.zip_code() << std::endl;
+        //}
+
     } else {
     std::cerr << "RPC Error: " << status.error_code() << ": " << status.error_message()
               << " (" << status.error_details() << ")" << std::endl;
-}
+    }
 }
 
 int main(){
+    
     RunClient();
+    
+    /* auto start = std::chrono::high_resolution_clock::now();
+    
+    const int numThreads = 5;
+    std::thread threads[numThreads];
+
+    for (int i = 0; i < numThreads ; i++){
+        threads[i] = std::thread(RunClient);
+    }
+
+    for (int i = 0; i < numThreads ; i++){
+        threads[i].join();
+    }
+
+    //std::thread t(RunClient);
+    //t.join();
+
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> duration = end - start ;
+
+    std::cout << "Elasped Time : " << duration.count() << "seconds" << std::endl; */
+
     return 0;
 }

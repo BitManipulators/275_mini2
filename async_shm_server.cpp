@@ -4,6 +4,7 @@
 #include "ring_buffer.hpp"
 #include "shared_memory_manager.hpp"
 #include "yaml_parser.hpp"
+#include "myconfig.hpp"
 
 #include "collision_manager/collision_manager.hpp"
 
@@ -46,12 +47,14 @@ std::unordered_map<std::size_t, GetCollisionsClientRequest> pendingClientRequest
 SharedMemoryManager* shared_memory_manager = nullptr;
 
 std::uint32_t rank;
-std::vector<std::size_t> child_ranks{};
-std::vector<std::size_t> ranks_on_same_machine{};
+Config config;
+MyConfig*  myconfig = MyConfig::getInstance();
+//std::vector<std::size_t> child_ranks{};
+//std::vector<std::size_t> ranks_on_same_machine{};
 
-bool is_rank_on_same_machine(const std::size_t rank) {
-    return std::find(ranks_on_same_machine.begin(), ranks_on_same_machine.end(), rank) != ranks_on_same_machine.end();
-}
+//bool is_rank_on_same_machine(const std::size_t rank) {
+//    return std::find(ranks_on_same_machine.begin(), ranks_on_same_machine.end(), rank) != ranks_on_same_machine.end();
+//}
 
 grpc::Status queryPeer(const std::string peer_address, const QueryRequest& query_request)
 {
@@ -148,6 +151,8 @@ std::optional<SharedMemoryQueryResponse> wait_for_new_shared_memory_query_respon
 }
 
 void handle_pending_requests(std::uint32_t worker_id, std::uint32_t rank) {
+    
+   
     while (!worker_stop_flag.load()) {
         std::optional<QueryRequest> maybe_query_request = wait_for_new_query_request(worker_id);
         if (!maybe_query_request.has_value()) {
@@ -175,15 +180,15 @@ void handle_pending_requests(std::uint32_t worker_id, std::uint32_t rank) {
                          "' with id: '" << query_response.id << "' to the pendingResponses ringbuffer" << std::endl;
         }
 
-        for (std::size_t child_rank : child_ranks) {
+        for (const auto& neighbour : myconfig->getLogicalNeighbors()){
             grpc::Status status;
 
-            int child_port = 50051 + child_rank;
-            std::string child_server_address = "127.0.0.1:" + std::to_string(child_port);
+            //int child_port = 50051 + child_rank;
+            //std::string child_server_address = "127.0.0.1:" + std::to_string(child_port);
 
-            std::cout << "Child server address is: " << child_server_address << std::endl;
+            std::cout << "Child server address is: " << neighbour << std::endl;
 
-            status = queryPeer(child_server_address, query_request);
+            status = queryPeer(neighbour, query_request);
             if (!status.ok()) {
                 // TODO
             }
@@ -196,6 +201,8 @@ void handle_pending_requests(std::uint32_t worker_id, std::uint32_t rank) {
 }
 
 void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank, const QueryResponse& query_response) {
+    
+    
     std::unique_lock<std::mutex> lock(pendingClientRequestsMutex);
 
     auto map_it = pendingClientRequestsMap.find(query_response.id);
@@ -217,7 +224,7 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
     client_request.ranks.push_back(query_response.results_from);
 
     // TODO: check if all ranks present better using yaml config to find out how many processes exist
-    if (client_request.ranks.size() == 5) {
+    if (client_request.ranks.size() == myconfig->getTotalNumberofProcess()) {
         GetCollisionsCallData* getCollisionsCallData = dynamic_cast<GetCollisionsCallData*>(client_request.call_data_base);
         if (getCollisionsCallData == nullptr) {
             std::cerr << "ResponseWorker " << worker_id << " could not convert call_data_base for client_request with id: "
@@ -231,6 +238,7 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
 }
 
 void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank) {
+    
     while (!worker_stop_flag.load()) {
         std::optional<QueryResponse> maybe_query_response = wait_for_new_query_response(worker_id);
         if (!maybe_query_response.has_value()) {
@@ -245,13 +253,15 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
             continue;
         }
 
+        
         std::uint32_t parent_rank = *(query_response.requested_by.end() - 2);
-        if (is_rank_on_same_machine(parent_rank)) {
+        if (myconfig->isSameNodeProcess(parent_rank)) {
             shared_memory_manager->send_results(parent_rank, query_response);
         } else {
-            int parent_port = 50051 + parent_rank;
-            std::string parent_server_address = "127.0.0.1:" + std::to_string(parent_port);
+            //int parent_port = 50051 + parent_rank;
+            //std::string parent_server_address = "127.0.0.1:" + std::to_string(parent_port);
 
+            std::string parent_server_address = config.getaddress(parent_rank);
             std::cout << "Parent server address is: " << parent_server_address << std::endl;
 
             grpc::Status status = sendResults(parent_server_address, query_response);
@@ -264,6 +274,8 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
 }
 
 void handle_shared_memory_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank) {
+    
+    
     while (!worker_stop_flag.load()) {
         std::optional<SharedMemoryQueryResponse> maybe_query_response = wait_for_new_shared_memory_query_response(worker_id);
         if (!maybe_query_response.has_value()) {
@@ -274,7 +286,7 @@ void handle_shared_memory_pending_responses(std::uint32_t worker_id, std::uint32
         std::cout << "SharedMemoryResponseWorker " << worker_id << " is handling response: " << shared_memory_query_response.id << std::endl;
 
         std::uint32_t parent_rank = *(shared_memory_query_response.requested_by.begin() + shared_memory_query_response.requested_by_size - 2);
-        if (process_rank != 0 && is_rank_on_same_machine(parent_rank)) {
+        if (process_rank != 0 && myconfig->isSameNodeProcess(parent_rank)) {
             shared_memory_manager->send_results(parent_rank, shared_memory_query_response);
         } else {
             // convert to QueryResponse and push it to self
@@ -353,7 +365,7 @@ int main(int argc, char** argv) {
 //    signal(SIGABRT, handle_signal);
 //    signal(SIGSEGV, handle_signal);
 
-    DeploymentConfig config = parseConfig("../config.yaml");
+    /*DeploymentConfig config = parseConfig("../config.yaml");
 
     const char *rankEnv = std::getenv("RANK");
     if (!rankEnv) {
@@ -369,12 +381,15 @@ int main(int argc, char** argv) {
     std::cout << "Peer addresses:" << std::endl;
     for (const auto &addr : peerAddresses) {
         std::cout << "  " << addr << std::endl;
-    }
+    } */
+
+    
+    rank = myconfig->getRank();
 
     // TODO: Use config.yaml
-    ranks_on_same_machine = {0, 1, 2, 3, 4};
+    //ranks_on_same_machine = {0, 1, 2, 3, 4};
 
-    if (rank == 0) {
+    /*if (rank == 0) {
         // Process A: query only Process B.
         child_ranks = {1};
     }
@@ -392,7 +407,7 @@ int main(int argc, char** argv) {
     {
         // Process D: query Process E.
         child_ranks = {4};
-    }
+    } */
 
     std::size_t max_num_collisions_each_rank = static_cast<std::size_t>(5 * std::ceil(static_cast<double>(
         collision_manager->get_num_collisions()) / 5));
