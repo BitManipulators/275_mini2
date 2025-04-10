@@ -150,6 +150,7 @@ void RunServer(const std::vector<std::string>& peerAddresses) {
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.SetMaxSendMessageSize(500*1024*1024);
     builder.RegisterService(&service);
 
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());

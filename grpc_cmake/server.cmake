@@ -148,6 +148,103 @@ add_library(
     shared_memory_manager.cpp
 )
 
+add_executable(
+  async_benchmark
+  async_benchmark.cpp
+)
+
+# Link libraries to the executable
+target_link_libraries(
+  async_benchmark
+  PRIVATE
+  benchmark::benchmark
+  collision_proto_converters
+  collision_query_service_impl
+  collision_manager
+  shared_memory_manager
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG v1.16.0
+)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+set(BENCHMARK_ENABLE_TESTING OFF)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF)
+set(BENCHMARK_ENABLE_ASSEMBLY_TESTS OFF)
+
+# add_executable(
+#     all_server_test
+#     all_server_test.cpp
+# )
+
+add_library(server_test_utils INTERFACE)
+target_include_directories(server_test_utils INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Define each test executable separately
+add_executable(sync_server_test sync_server_test.cpp server_test_utils.hpp)
+add_executable(async_server_test async_server_test.cpp server_test_utils.hpp)
+add_executable(async_shm_server_test async_shm_server_test.cpp server_test_utils.hpp)
+
+# Link libraries to each target
+target_link_libraries(
+    sync_server_test
+    server_test_utils
+    collision_proto_converters
+    collision_manager
+    yaml_parser
+    cm_grpc_proto
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    GTest::gtest_main
+)
+
+target_link_libraries(
+    async_server_test
+    server_test_utils
+    collision_proto_converters
+    collision_manager
+    yaml_parser
+    cm_grpc_proto
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    GTest::gtest_main
+)
+
+target_link_libraries(
+    async_shm_server_test
+    server_test_utils
+    collision_proto_converters
+    collision_manager
+    yaml_parser
+    cm_grpc_proto
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    GTest::gtest_main
+)
+
+# target_link_libraries(
+#   async_benchmark
+#   collision_proto_converters
+#   collision_query_service_impl
+#   collision_manager
+#   shared_memory_manager
+#   ${_REFLECTION}
+#   ${_GRPC_GRPCPP}
+#   ${_PROTOBUF_LIBPROTOBUF}
+# )
+
 # Targets greeter_[async_](client|server)
 foreach(_target
   async_server async_shm_server sync_server client
@@ -167,3 +264,13 @@ foreach(_target
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF})
 endforeach()
+
+#---------------------------------------------------------------------------------------
+
+enable_testing()
+
+include(GoogleTest)
+#gtest_discover_tests(all_server_test)
+gtest_discover_tests(sync_server_test)
+gtest_discover_tests(async_server_test)
+gtest_discover_tests(async_shm_server_test)
