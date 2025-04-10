@@ -5,12 +5,15 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include "myconfig.hpp"
 
 using google::protobuf::Empty;
-
+int MASTER = 0;
 void RunClient() {
 
-    std::string target_str = "127.0.0.1:50051";
+    Config config;
+    // Set Master process IP
+    std::string target_str = config.getIP(MASTER) + ":" + std::to_string(config.getPortNumber(MASTER));
     std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
     std::unique_ptr<collision_proto::CollisionQueryService::Stub> stub = collision_proto::CollisionQueryService::NewStub(channel);
 
@@ -44,7 +47,7 @@ void RunClient() {
     } else {
     std::cerr << "RPC Error: " << status.error_code() << ": " << status.error_message()
               << " (" << status.error_details() << ")" << std::endl;
-}
+    }
 }
 
 int main(){
@@ -62,6 +65,9 @@ int main(){
     for (int i = 0; i < numThreads ; i++){
         threads[i].join();
     }
+
+    //std::thread t(RunClient);
+    //t.join();
 
     auto end = std::chrono::high_resolution_clock::now();
 

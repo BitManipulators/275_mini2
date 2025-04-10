@@ -17,6 +17,7 @@ class MyConfig {
         std::vector<std::string> getLogicalNeighbors();
         int getTotalNumberofProcess();
         int getPortNumber();
+        bool isSameNodeProcess(int target_rank);
         
 
     private :

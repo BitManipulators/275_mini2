@@ -81,6 +81,7 @@ class Config {
         void print_config ();
         std::vector<std::string> get_logical_neighbors (int rank);
         int getPortNumber(int rank);
+        std::string getIP(int rank);
         int getTotalWorkers();
         std::string getaddress(int rank);
 

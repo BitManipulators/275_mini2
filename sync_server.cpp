@@ -12,6 +12,7 @@
 #include <vector>
 
 
+
 const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_20250123.csv");
 
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
@@ -69,7 +70,9 @@ class CollisionQueryServiceImpl final : public collision_proto::CollisionQuerySe
                 query_request.id = counter.fetch_add(1);
             }
             
-            //Check for duplicates    
+            //Check for duplicates  
+
+            
             
             if (rank != 0){
 
@@ -149,6 +152,8 @@ void RunServer() {
     grpc::ServerBuilder builder;
     builder.AddListeningPort(myaddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
+
+    builder.SetSyncServerOption(grpc::ServerBuilder::SyncServerOption::MAX_POLLERS,1);
 
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
 

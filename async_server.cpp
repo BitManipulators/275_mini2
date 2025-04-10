@@ -26,6 +26,8 @@ const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
 std::uint32_t rank;
+MyConfig*  myconfig = MyConfig::getInstance();
+Config config;
 
 std::mutex pendingRequestsMutex{};
 PendingRequestsRingbuffer pendingRequests{};
@@ -116,7 +118,7 @@ QueryResponse wait_for_new_query_response(std::uint32_t id) {
 
 void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
     
-    MyConfig*  myconfig = MyConfig::getInstance();
+    
     while (true) {
         QueryRequest query_request = wait_for_new_query_request(id);
         query_request.requested_by.push_back(rank);
@@ -204,7 +206,7 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
 
 void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank, const QueryResponse& query_response) {
     
-    MyConfig*  myconfig = MyConfig::getInstance();
+    
     auto map_it = pendingClientRequestsMap.find(query_response.id);
 
     if (map_it == pendingClientRequestsMap.end()) {
@@ -241,7 +243,7 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
 
 void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank) {
 
-    Config config;
+    
     while (true) {
         QueryResponse query_response = wait_for_new_query_response(worker_id);
 
@@ -267,7 +269,7 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
 
 int main(int argc, char** argv) {
     
-    MyConfig*  myconfig = MyConfig::getInstance();
+    
 
     rank = myconfig->getRank();
 

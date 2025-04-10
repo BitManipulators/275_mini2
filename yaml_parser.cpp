@@ -43,6 +43,12 @@ int Config::getPortNumber(int rank){
 
 }
 
+std::string Config::getIP(int rank){
+
+    return processes[rank].ip;
+
+}
+
 std::string Config::getaddress(int rank){
 
     return processes[rank].ip + ":" + std::to_string(processes[rank].port);

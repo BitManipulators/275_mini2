@@ -47,6 +47,16 @@ std::vector<std::string> MyConfig::getLogicalNeighbors(){
 
 }
 
+bool MyConfig::isSameNodeProcess(int target_rank){
+
+    std::string my_ip = config.getIP(rank); 
+    std::string target_ip = config.getIP(target_rank);
+    return  my_ip ==  target_ip;
+
+
+
+}
+
 int MyConfig::getTotalNumberofProcess(){
     return config.getTotalWorkers();
 }
