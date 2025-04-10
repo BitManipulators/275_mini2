@@ -10,13 +10,12 @@
 #include <numeric>
 #include <mutex>
 #include <future>
-#include <google/protobuf/empty.pb.h>
 
 const std::string CSV_FILE = "../Motor_Vehicle_Collisions_-_Crashes_20250123.csv";
 
 // Global variables for tracking scaling baselines
-double async_strong_scaling_baseline = 0.0;
-double async_weak_scaling_baseline = 0.0;
+double grpc_strong_scaling_baseline = 0.0;
+double grpc_weak_scaling_baseline = 0.0;
 std::mutex benchmark_mutex;
 
 // Helper to create test queries
@@ -43,14 +42,14 @@ std::vector<QueryRequest> createTestQueries(int count) {
     return queries;
 }
 
-// Utility to create a gRPC client stub for async server
+// Utility to create a gRPC client stub
 std::unique_ptr<collision_proto::CollisionQueryService::Stub> createClientStub(const std::string& address) {
     std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(address, grpc::InsecureChannelCredentials());
     return collision_proto::CollisionQueryService::NewStub(channel);
 }
 
-// Strong Scaling benchmark - connecting to running async servers
-static void BM_AsyncServerStrongScaling(benchmark::State& state) {
+// Strong Scaling benchmark - connecting to running servers
+static void BM_SyncServerStrongScaling(benchmark::State& state) {
     // Number of server instances to test with
     int num_servers = state.range(0);
 
@@ -90,17 +89,17 @@ static void BM_AsyncServerStrongScaling(benchmark::State& state) {
                 int end_index = (server_id == num_servers - 1) ? TOTAL_QUERIES : (start_index + partition_size);
 
                 for (int query_idx = start_index; query_idx < end_index; query_idx++) {
-                    // For async server, we use SendRequest method instead of GetCollisions
+                    // Convert to proto using the correct method signature
                     collision_proto::QueryRequest proto_request = QueryProtoConverter::serialize(queries[query_idx]);
 
                     // Execute query
                     grpc::ClientContext context;
-                    google::protobuf::Empty response;
+                    collision_proto::QueryResponse proto_response;
                     auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(10);
                     context.set_deadline(deadline);
 
-                    auto status = client->SendRequest(&context, proto_request, &response);
-                    benchmark::DoNotOptimize(response);
+                    auto status = client->GetCollisions(&context, proto_request, &proto_response);
+                    benchmark::DoNotOptimize(proto_response);
 
                     // Sleep a bit to prevent overwhelming the servers
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -128,21 +127,21 @@ static void BM_AsyncServerStrongScaling(benchmark::State& state) {
     state.counters["Avg_server_time"] = avg_time;
     state.counters["Max_server_time"] = max_time;
 
-    if (num_servers > 1 && async_strong_scaling_baseline > 0) {
-        double speedup = async_strong_scaling_baseline / max_time;
+    if (num_servers > 1 && grpc_strong_scaling_baseline > 0) {
+        double speedup = grpc_strong_scaling_baseline / max_time;
         double ideal_speedup = num_servers; // Linear scaling
         state.counters["Speedup"] = speedup;
         state.counters["Scaling_efficiency"] = benchmark::Counter(
             100.0 * (speedup / ideal_speedup)); // 100% = linear, >100% = super-linear
     } else if (num_servers == 1) {
-        async_strong_scaling_baseline = max_time;
+        grpc_strong_scaling_baseline = max_time;
         state.counters["Speedup"] = 1.0;
         state.counters["Scaling_efficiency"] = 100.0;
     }
 }
 
-// Weak Scaling benchmark - connecting to running async servers
-static void BM_AsyncServerWeakScaling(benchmark::State& state) {
+// Weak Scaling benchmark - connecting to running servers
+static void BM_SyncServerWeakScaling(benchmark::State& state) {
     int num_servers = state.range(0);
     const int QUERIES_PER_SERVER = 20; // Reduced for testing
     const int TOTAL_QUERIES = QUERIES_PER_SERVER * num_servers;
@@ -175,17 +174,17 @@ static void BM_AsyncServerWeakScaling(benchmark::State& state) {
                 int end_idx = start_idx + QUERIES_PER_SERVER;
 
                 for (int query_idx = start_idx; query_idx < end_idx; query_idx++) {
-                    // For async server, we use SendRequest method
+                    // Convert to proto
                     collision_proto::QueryRequest proto_request = QueryProtoConverter::serialize(queries[query_idx]);
 
                     // Execute query
                     grpc::ClientContext context;
-                    google::protobuf::Empty response;
+                    collision_proto::QueryResponse proto_response;
                     auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(10);
                     context.set_deadline(deadline);
 
-                    auto status = client->SendRequest(&context, proto_request, &response);
-                    benchmark::DoNotOptimize(response);
+                    auto status = client->GetCollisions(&context, proto_request, &proto_response);
+                    benchmark::DoNotOptimize(proto_response);
 
                     // Sleep a bit to prevent overwhelming the servers
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -212,18 +211,18 @@ static void BM_AsyncServerWeakScaling(benchmark::State& state) {
     state.counters["Queries_per_server"] = QUERIES_PER_SERVER;
     state.counters["Avg_time_per_query_ms"] = avg_time_per_query * 1000.0;
 
-    if (num_servers > 1 && async_weak_scaling_baseline > 0) {
-        double efficiency = async_weak_scaling_baseline / avg_time_per_query;
+    if (num_servers > 1 && grpc_weak_scaling_baseline > 0) {
+        double efficiency = grpc_weak_scaling_baseline / avg_time_per_query;
         state.counters["Weak_scaling_efficiency"] = benchmark::Counter(
             100.0 * efficiency); // 100% = perfect, <100% = efficiency loss
     } else if (num_servers == 1) {
-        async_weak_scaling_baseline = avg_time_per_query;
+        grpc_weak_scaling_baseline = avg_time_per_query;
         state.counters["Weak_scaling_efficiency"] = 100.0;
     }
 }
 
 // Benchmark with full topology - just connecting to the root node
-static void BM_AsyncServerConfigTopology(benchmark::State& state) {
+static void BM_SyncServerConfigTopology(benchmark::State& state) {
     const int QUERIES_PER_TEST = state.range(0);
 
     // Create test queries
@@ -237,16 +236,20 @@ static void BM_AsyncServerConfigTopology(benchmark::State& state) {
         auto start_time = std::chrono::high_resolution_clock::now();
 
         for (int i = 0; i < QUERIES_PER_TEST; i++) {
-            // Convert query to proto and use SendRequest for async server
+            // Convert query to proto
             collision_proto::QueryRequest proto_request = QueryProtoConverter::serialize(queries[i]);
 
             // Execute query against process A
             grpc::ClientContext context;
-            google::protobuf::Empty response;
+            collision_proto::QueryResponse proto_response;
             auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(10);
             context.set_deadline(deadline);
 
-            auto status = client->SendRequest(&context, proto_request, &response);
+            auto status = client->GetCollisions(&context, proto_request, &proto_response);
+            benchmark::DoNotOptimize(proto_response);
+
+            // Check if response contains aggregated results from all processes
+            QueryResponse response = CollisionProtoConverter::deserialize(proto_response);
             benchmark::DoNotOptimize(response);
 
             // Sleep a bit to prevent overwhelming the servers
@@ -264,17 +267,17 @@ static void BM_AsyncServerConfigTopology(benchmark::State& state) {
 }
 
 // Run benchmarks
-BENCHMARK(BM_AsyncServerStrongScaling)
+BENCHMARK(BM_SyncServerStrongScaling)
     ->Range(1, 5)  // Test with 1 to 5 servers
     ->Unit(benchmark::kMillisecond)
     ->UseRealTime();
 
-BENCHMARK(BM_AsyncServerWeakScaling)
+BENCHMARK(BM_SyncServerWeakScaling)
     ->Range(1, 5)
     ->Unit(benchmark::kMillisecond)
     ->UseRealTime();
 
-BENCHMARK(BM_AsyncServerConfigTopology)
+BENCHMARK(BM_SyncServerConfigTopology)
     ->RangeMultiplier(2)
     ->Range(2, 8)  // Fewer queries for topology test
     ->Unit(benchmark::kMillisecond)

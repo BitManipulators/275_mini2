@@ -153,11 +153,50 @@ add_executable(
   async_benchmark.cpp
 )
 
+add_executable(
+  sync_benchmark
+  sync_benchmark.cpp
+)
+
+add_executable(
+  async_shm_benchmark
+  async_shm_benchmark.cpp
+)
+
 # Link libraries to the executable
 target_link_libraries(
   async_benchmark
   PRIVATE
   benchmark::benchmark
+  yaml_parser
+  collision_proto_converters
+  collision_query_service_impl
+  collision_manager
+  shared_memory_manager
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+)
+
+target_link_libraries(
+  sync_benchmark
+  PRIVATE
+  benchmark::benchmark
+  yaml_parser
+  collision_proto_converters
+  collision_query_service_impl
+  collision_manager
+  shared_memory_manager
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+)
+
+target_link_libraries(
+  async_shm_benchmark
+  PRIVATE
+  benchmark::benchmark
+  yaml_parser
   collision_proto_converters
   collision_query_service_impl
   collision_manager
