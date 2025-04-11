@@ -51,6 +51,7 @@ struct Ringbuffer {
         return true;
     }
 
+    // AI Assistance Was Used for Iterator
     class Iterator {
     private:
         Ringbuffer* rb;

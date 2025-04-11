@@ -3,6 +3,8 @@
 #include <iostream>
 #include <span>
 
+// AI Assistance Was Used
+
 class Freelist {
 private:
     size_t free_list_head_offset_;  // Offset to the head of the freelist
