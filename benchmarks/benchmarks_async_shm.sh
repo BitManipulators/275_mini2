@@ -3,7 +3,7 @@
 echo "Asynchronous client"
 
 echo "5 processes"
-$(dirname $0)/run.sh ./async_shm_server 5
+$(dirname $0)/../run.sh ./async_shm_server 5
 sleep 10
 
 echo "1 client"
@@ -32,4 +32,4 @@ hyperfine -m 10 "/bin/bash -c './client & ./client & ./client & ./client & ./cli
 hyperfine -m 25 "/bin/bash -c './client & ./client & ./client & ./client & ./client & ./client & ./client & ./client & wait'" > 8_clients_25_requests_async_shm_results.txt
 hyperfine -m 50 "/bin/bash -c './client & ./client & ./client & ./client & ./client & ./client & ./client & ./client & wait'" > 8_clients_50_requests_async_shm_results.txt
 hyperfine -m 100 "/bin/bash -c './client & ./client & ./client & ./client & ./client & ./client & ./client & ./client & wait'" > 8_clients_100_requests_async_shm_results.txt
-$(dirname $0)/kill.sh
+$(dirname $0)/../kill.sh
