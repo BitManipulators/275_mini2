@@ -110,6 +110,7 @@ message QueryResponse {
 
 service CollisionQueryService {
     rpc GetCollisions (QueryRequest) returns (QueryResponse);
+    rpc StreamCollisions (QueryRequest) returns (stream QueryResponse);
     rpc SendRequest (QueryRequest) returns (google.protobuf.Empty);
     rpc ReceiveResponse (QueryResponse) returns (google.protobuf.Empty);
 }

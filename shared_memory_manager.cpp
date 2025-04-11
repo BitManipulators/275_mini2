@@ -1,6 +1,7 @@
 #include "shared_memory_manager.hpp"
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <csignal>
 #include <format>
@@ -10,6 +11,8 @@
 
 const std::size_t MAX_INITIALIZING_WAIT_SECONDS = 30;
 const std::size_t MAX_FREE_LIST_ALLOCATION_WAIT_SECONDS = 10;
+
+std::mutex send_results_mutex;
 
 SharedMemoryManager::SharedMemoryManager(const std::uint64_t rank, const std::size_t block_size)
   : rank_{rank}
@@ -141,36 +144,56 @@ SharedMemoryQueryResponse&& SharedMemoryManager::pop_result() {
     return shared_memory_global_data_->shared_memory_local_data[rank_].results.pop();
 }
 
-QueryResponse SharedMemoryManager::deserialize(SharedMemoryQueryResponse& shared_memory_query_response) {
-    // Copy shared_memory_query_response into a query_response
-    std::size_t num_collisions = shared_memory_query_response.data_size / sizeof(Collision);
-    std::vector<Collision> collisions(num_collisions); // pre-allocate enough space
-    std::memcpy(collisions.data(),
-                free_list_memory_pool_.data() + shared_memory_query_response.data_offset,
-                shared_memory_query_response.data_size);
+BakeryMutex& SharedMemoryManager::get_lock(std::uint32_t rank) {
+    return shared_memory_global_data_->shared_memory_local_data[rank_].mutex;
+}
 
-    std::vector<std::uint32_t> requested_by(shared_memory_query_response.requested_by_size); // pre-allocate enough space
+QueryResponse SharedMemoryManager::deserialize(SharedMemoryQueryResponse& shared_memory_query_response) {
+    std::size_t id = shared_memory_query_response.id;
+    std::size_t data_offset = shared_memory_query_response.data_offset;
+    std::size_t data_size = shared_memory_query_response.data_size;
+    std::size_t requested_by_size = shared_memory_query_response.requested_by_size;
+    std::uint32_t results_from = shared_memory_query_response.results_from;
+
+    // Copy shared_memory_query_response into a query_response
+    if (data_size % sizeof(Collision) != 0) {
+        std::cerr << "Size of collisions does not match for id: " << id
+                  << " from: " << results_from << std::endl;
+    }
+
+    // Destroy shared_memory_query_response so these aren't accidentally re-accessed
+    shared_memory_query_response.id = -1;
+    shared_memory_query_response.data_offset = -1;
+    shared_memory_query_response.data_size = 0;
+    shared_memory_query_response.requested_by_size = 0;
+    shared_memory_query_response.results_from = -1;
+
+    std::size_t num_collisions = data_size / sizeof(Collision);
+    std::cout << "Num collisions: " << num_collisions << " for id: " << id << " from: " << results_from << std::endl;
+
+    std::vector<Collision> collisions;
+    collisions.reserve(num_collisions); // pre-allocate enough space
+    collisions.resize(num_collisions); // ensure vector knows what the size is (technically wasteful because default constructs N elements)
+    std::memcpy(collisions.data(), free_list_memory_pool_.data() + data_offset, data_size);
+
+    std::vector<std::uint32_t> requested_by(requested_by_size); // pre-allocate enough space
     std::copy_n(shared_memory_query_response.requested_by.begin(),
-                shared_memory_query_response.requested_by_size,
+                requested_by_size,
                 requested_by.begin());
 
     // Deallocate the shared_memory_query_response
     {
         BakeryMutexGuard guard(shared_memory_global_data_->free_list_global_mutex, rank_);
-        shared_memory_global_data_->memory_blocks_free_list.deallocate(free_list_memory_pool_.data() + shared_memory_query_response.data_offset,
+        shared_memory_global_data_->memory_blocks_free_list.deallocate(free_list_memory_pool_.data() + data_offset,
                                                                        free_list_memory_pool_);
         std::cout << std::format("{}: Deallocated block back to free list.", rank_)
                   << std::endl;
     }
 
-    // Destroy shared_memory_query_response so these aren't accidentally re-accessed
-    shared_memory_query_response.data_offset = -1;
-    shared_memory_query_response.data_size = 0;
-
     return {
-        .id = shared_memory_query_response.id,
+        .id = id,
         .requested_by = requested_by,
-        .results_from = shared_memory_query_response.results_from,
+        .results_from = results_from,
         .collisions = collisions,
     };
 }
@@ -256,10 +279,12 @@ void SharedMemoryManager::send_results(const std::size_t parent_rank, const Quer
 
 void SharedMemoryManager::send_results(const std::size_t parent_rank, SharedMemoryQueryResponse& query_response) {
     {
+        std::unique_lock<std::mutex> send_results_lock(send_results_mutex);
         BakeryMutexGuard guard(shared_memory_global_data_->shared_memory_local_data[parent_rank].mutex, rank_);
         query_response.requested_by_size--; // pop self rank from end of requested_by list
         shared_memory_global_data_->shared_memory_local_data[parent_rank].results.push(query_response);
     }
 
-    std::cout << std::format("{}: Added response to parent rank: {} shared memory ringbuffer.", rank_, parent_rank) << std::endl;
+    std::cout << std::format("{}: Added response from {} to parent rank: {} shared memory ringbuffer.",
+        rank_, query_response.results_from, parent_rank) << std::endl;
 }

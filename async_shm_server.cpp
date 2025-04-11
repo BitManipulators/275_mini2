@@ -43,6 +43,7 @@ std::vector<std::thread> responseWorkers{};
 std::vector<std::thread> shmResponseWorkers{};
 
 std::unordered_map<std::size_t, GetCollisionsClientRequest> pendingClientRequestsMap{};
+std::unordered_map<std::size_t, StreamCollisionsClientRequest> pendingStreamRequestsMap{};
 
 SharedMemoryManager* shared_memory_manager = nullptr;
 
@@ -137,14 +138,20 @@ std::optional<QueryResponse> wait_for_new_query_response(std::uint32_t id) {
     return {pendingResponses.pop()};
 }
 
-std::optional<SharedMemoryQueryResponse> wait_for_new_shared_memory_query_response(std::uint32_t id) {
+std::optional<SharedMemoryQueryResponse> wait_for_new_shared_memory_query_response(std::uint32_t id, std::uint32_t rank) {
     while (!worker_stop_flag.load()) {
         if (!shared_memory_manager->has_results()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
 
-        return {shared_memory_manager->pop_result()};
+        BakeryMutex& lock = shared_memory_manager->get_lock(rank);
+        {
+            BakeryMutexGuard guard(lock, rank);
+            if (shared_memory_manager->has_results()) {
+                return {shared_memory_manager->pop_result()};
+            }
+        }
     }
 
     return {};
@@ -205,35 +212,71 @@ void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t proc
     
     std::unique_lock<std::mutex> lock(pendingClientRequestsMutex);
 
-    auto map_it = pendingClientRequestsMap.find(query_response.id);
-    if (map_it == pendingClientRequestsMap.end()) {
+    auto client_map_it = pendingClientRequestsMap.find(query_response.id);
+    auto stream_map_it = pendingStreamRequestsMap.find(query_response.id);
+    if (client_map_it == pendingClientRequestsMap.end() && stream_map_it == pendingStreamRequestsMap.end()) {
         std::cerr << "ResponseWorker " << worker_id << " could not find client_request for id: " << query_response.id << std::endl;
         return;
     }
 
-    GetCollisionsClientRequest& client_request = map_it->second;
+    std::vector<std::uint32_t>* ranks = nullptr;
+    if (client_map_it != pendingClientRequestsMap.end()) {
+        GetCollisionsClientRequest& client_request = client_map_it->second;
+        ranks = &client_request.ranks;
+    } else {
+        StreamCollisionsClientRequest& stream_request = stream_map_it->second;
+        ranks = &stream_request.ranks;
+    }
 
-    auto rank_it = std::find(client_request.ranks.begin(), client_request.ranks.end(), query_response.results_from);
-    if (rank_it != client_request.ranks.end()) {
+    auto rank_it = std::find(ranks->begin(), ranks->end(), query_response.results_from);
+    if (rank_it != ranks->end()) {
         std::cout << "ResponseWorker " << worker_id << " sees rank has already been processed for client_request with id: "
                   << query_response.id << std::endl;
         return;
     }
 
-    client_request.collisions.insert(client_request.collisions.end(), query_response.collisions.begin(), query_response.collisions.end());
-    client_request.ranks.push_back(query_response.results_from);
+    ranks->push_back(query_response.results_from);
 
-    // TODO: check if all ranks present better using yaml config to find out how many processes exist
-    if (client_request.ranks.size() == myconfig->getTotalNumberofProcess()) {
-        GetCollisionsCallData* getCollisionsCallData = dynamic_cast<GetCollisionsCallData*>(client_request.call_data_base);
-        if (getCollisionsCallData == nullptr) {
+    if (client_map_it != pendingClientRequestsMap.end()) {
+        GetCollisionsClientRequest& client_request = client_map_it->second;
+        client_request.collisions.insert(client_request.collisions.end(), query_response.collisions.begin(), query_response.collisions.end());
+
+        // TODO: check if all ranks present better using yaml config to find out how many processes exist
+        if (ranks->size() == myconfig->getTotalNumberofProcess()) {
+            GetCollisionsCallData* getCollisionsCallData = dynamic_cast<GetCollisionsCallData*>(client_request.call_data_base);
+            if (getCollisionsCallData == nullptr) {
+                std::cerr << "ResponseWorker " << worker_id << " could not convert call_data_base for client_request with id: "
+                          << query_response.id << std::endl;
+                return;
+            }
+
+            lock.unlock();
+            getCollisionsCallData->CompleteRequest(query_response.id, client_request.collisions);
+            lock.lock();
+
+            pendingClientRequestsMap.erase(client_map_it);
+        }
+    } else {
+        StreamCollisionsClientRequest& stream_request = stream_map_it->second;
+        StreamCollisionsCallData* streamCollisionsCallData = dynamic_cast<StreamCollisionsCallData*>(stream_request.call_data_base);
+        if (streamCollisionsCallData == nullptr) {
             std::cerr << "ResponseWorker " << worker_id << " could not convert call_data_base for client_request with id: "
-                  << query_response.id << std::endl;
+                      << query_response.id << std::endl;
             return;
         }
 
-        getCollisionsCallData->CompleteRequest(query_response.id, client_request.collisions);
-        pendingClientRequestsMap.erase(map_it);
+        lock.unlock();
+        std::unique_lock<std::mutex> write_lock(stream_map_it->second.write_mutex);
+        streamCollisionsCallData->Write(query_response.id, query_response.results_from, query_response.collisions, std::move(write_lock));
+
+        if (ranks->size() == myconfig->getTotalNumberofProcess()) {
+            std::unique_lock<std::mutex> finish_lock(stream_map_it->second.write_mutex);
+            streamCollisionsCallData->Finish(query_response.id);
+            finish_lock.unlock();
+
+            lock.lock();
+            pendingStreamRequestsMap.erase(stream_map_it);
+        }
     }
 }
 
@@ -246,7 +289,8 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
         }
         QueryResponse& query_response = maybe_query_response.value();
 
-        std::cout << "ResponseWorker " << worker_id << " is handling response: " << query_response.id << std::endl;
+        std::cout << "ResponseWorker " << worker_id << " is handling response: " << query_response.id
+                  << " from: " << query_response.results_from << std::endl;
 
         if (process_rank == 0) {
             handle_client_pending_responses(worker_id, process_rank, query_response);
@@ -277,13 +321,17 @@ void handle_shared_memory_pending_responses(std::uint32_t worker_id, std::uint32
     
     
     while (!worker_stop_flag.load()) {
-        std::optional<SharedMemoryQueryResponse> maybe_query_response = wait_for_new_shared_memory_query_response(worker_id);
+        std::optional<SharedMemoryQueryResponse> maybe_query_response = wait_for_new_shared_memory_query_response(worker_id, process_rank);
         if (!maybe_query_response.has_value()) {
             continue;
         }
         SharedMemoryQueryResponse& shared_memory_query_response = maybe_query_response.value();
 
-        std::cout << "SharedMemoryResponseWorker " << worker_id << " is handling response: " << shared_memory_query_response.id << std::endl;
+        std::size_t id = shared_memory_query_response.id;
+        std::uint32_t results_from = shared_memory_query_response.results_from;
+
+        std::cout << "SharedMemoryResponseWorker " << worker_id << " is handling response: " << id
+                  << " from: " << results_from << std::endl;
 
         std::uint32_t parent_rank = *(shared_memory_query_response.requested_by.begin() + shared_memory_query_response.requested_by_size - 2);
         if (process_rank != 0 && myconfig->isSameNodeProcess(parent_rank)) {
@@ -301,8 +349,8 @@ void handle_shared_memory_pending_responses(std::uint32_t worker_id, std::uint32
             }
         }
 
-        std::cout << "SharedMemoryResponseWorker " << worker_id << " has processed response from: " << shared_memory_query_response.results_from
-                  << " with id: " << shared_memory_query_response.id << std::endl;
+        std::cout << "SharedMemoryResponseWorker " << worker_id << " has processed response from: " << results_from
+                  << " with id: " << id << std::endl;
     }
 
     std::cout << "SharedMemoryResponseWorker: " << worker_id << " stopped." << std::endl;
@@ -417,12 +465,14 @@ int main(int argc, char** argv) {
 
     CollisionQueryServiceImpl service{rank,
                                       pendingRequestsMutex,
+                                      pendingClientRequestsMutex,
                                       pendingResponsesMutex,
                                       pendingRequests,
                                       pendingResponses,
                                       pendingRequestsConditionVariable,
                                       pendingResponsesConditionVariable,
-                                      pendingClientRequestsMap};
+                                      pendingClientRequestsMap,
+                                      pendingStreamRequestsMap};
 
     for (int i = 0; i < 4; ++i) {
         requestWorkers.push_back(std::thread(handle_pending_requests, i, rank));

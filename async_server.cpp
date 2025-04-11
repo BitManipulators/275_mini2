@@ -37,11 +37,13 @@ std::mutex pendingResponsesMutex{};
 PendingResponsesRingbuffer pendingResponses{};
 std::condition_variable pendingResponsesConditionVariable{};
 
+std::mutex pendingClientRequestsMutex{};
+
 std::vector<std::thread> requestWorkers{};
 std::vector<std::thread> responseWorkers{};
 
 std::unordered_map<std::size_t, GetCollisionsClientRequest> pendingClientRequestsMap{};
-
+std::unordered_map<std::size_t, StreamCollisionsClientRequest> pendingStreamRequestsMap{};
 
 grpc::Status queryPeer(const std::string peer_address, const QueryRequest& query_request)
 {
@@ -275,12 +277,14 @@ int main(int argc, char** argv) {
 
     CollisionQueryServiceImpl service{rank,
                                       pendingRequestsMutex,
+                                      pendingClientRequestsMutex,
                                       pendingResponsesMutex,
                                       pendingRequests,
                                       pendingResponses,
                                       pendingRequestsConditionVariable,
                                       pendingResponsesConditionVariable,
-                                      pendingClientRequestsMap};
+                                      pendingClientRequestsMap,
+                                      pendingStreamRequestsMap};
 
     for (int i = 0; i < 4; ++i) {
         requestWorkers.push_back(std::thread(handle_pending_requests, i, rank));
