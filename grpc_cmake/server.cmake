@@ -143,9 +143,9 @@ target_link_libraries(
 
 add_library(
     shared_memory_manager
-    bakery_mutex.cpp
-    shared_memory.cpp
-    shared_memory_manager.cpp
+    shared_memory/bakery_mutex.cpp
+    shared_memory/shared_memory.cpp
+    shared_memory/shared_memory_manager.cpp
 )
 
 # Targets greeter_[async_](client|server)
