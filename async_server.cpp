@@ -119,8 +119,6 @@ QueryResponse wait_for_new_query_response(std::uint32_t id) {
 }
 
 void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
-    
-    
     while (true) {
         QueryRequest query_request = wait_for_new_query_request(id);
         query_request.requested_by.push_back(rank);
@@ -143,12 +141,9 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
                          "' with id: '" << query_response.id << "' to the pendingResponses ringbuffer" << std::endl;
         }
 
-        
+        grpc::Status status;
 
-        grpc::Status status;        
-        
         for (const auto& neighbour : myconfig->getLogicalNeighbors()){
-                
                 status = queryPeer(neighbour, query_request);
                 if (!status.ok()) {
                     // TODO
@@ -156,59 +151,10 @@ void handle_pending_requests(std::uint32_t id, std::uint32_t rank) {
                 }
                 std::cout << "RequestWorker " << id << " has processed query: " << query_request.id << std::endl;
         }
-        
     }
-        
-
-        // TODO: This should just iterate over each children() or something.
-        
-        /*grpc::Status status;
-        // Query based on overlay:
-        if (rank == 0) {
-            // Process A: query only Process B.
-            status = queryPeer("127.0.0.1:50052", query_request);
-            if (!status.ok()) {
-                // TODO
-            }
-        }
-        else if (rank == 1)
-        {
-            // Process B: query Processes C and D.
-            status = queryPeer("127.0.0.1:50053", query_request);
-            if (!status.ok()) {
-                // TODO
-            }
-
-            status = queryPeer("127.0.0.1:50054", query_request);
-            if (!status.ok()) {
-                // TODO
-            }
-        }
-        else if (rank == 2)
-        {
-            // Process C: query Process E.
-            status = queryPeer("127.0.0.1:50055", query_request);
-            if (!status.ok()) {
-                // TODO
-            }
-        }
-        else if (rank == 3)
-        {
-            // Process D: query Process E.
-            status = queryPeer("127.0.0.1:50055", query_request);
-            if (!status.ok()) {
-                // TODO
-            }
-        }
-        // Process E (rank 4) does not forward the query further.  
-        std::cout << "RequestWorker " << id << " has processed query: " << query_request.id << std::endl;
-    }*/
-
 }
 
 void handle_client_pending_responses(std::uint32_t worker_id, std::uint32_t process_rank, const QueryResponse& query_response) {
-    
-    
     auto map_it = pendingClientRequestsMap.find(query_response.id);
 
     if (map_it == pendingClientRequestsMap.end()) {
@@ -270,9 +216,6 @@ void handle_pending_responses(std::uint32_t worker_id, std::uint32_t process_ran
 }
 
 int main(int argc, char** argv) {
-    
-    
-
     rank = myconfig->getRank();
 
     CollisionQueryServiceImpl service{rank,

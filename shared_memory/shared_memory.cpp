@@ -170,17 +170,3 @@ void* SharedMemory::get_data() {
 std::size_t SharedMemory::get_size() {
     return shm_size_;
 }
-
-/*
-void* SharedMemory::allocate(std::size_t bytes) {
-    std::uint8_t ptr = next_free_bytes_ptr_;
-
-    if (ptr + bytes > shm_ptr_ + shm_size_) {
-        return nullptr;
-    }
-
-    next_free_bytes_ptr_ += bytes;
-
-    return ptr;
-}
-*/

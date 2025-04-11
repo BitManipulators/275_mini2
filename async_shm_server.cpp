@@ -413,49 +413,7 @@ int main(int argc, char** argv) {
 //    signal(SIGABRT, handle_signal);
 //    signal(SIGSEGV, handle_signal);
 
-    /*DeploymentConfig config = parseConfig("../config.yaml");
-
-    const char *rankEnv = std::getenv("RANK");
-    if (!rankEnv) {
-        std::cerr << "RANK environment variable not set!" << std::endl;
-        return 1;
-    }
-    rank = std::stoi(rankEnv);
-    std::string selfProcessId = "process_" + std::string(1, 'a' + rank);
-    std::cout << "Self process id: " << selfProcessId << std::endl;
-
-    // Build peer addresses by excluding self.
-    std::vector<std::string> peerAddresses = getPeerAddresses(config, selfProcessId);
-    std::cout << "Peer addresses:" << std::endl;
-    for (const auto &addr : peerAddresses) {
-        std::cout << "  " << addr << std::endl;
-    } */
-
-    
     rank = myconfig->getRank();
-
-    // TODO: Use config.yaml
-    //ranks_on_same_machine = {0, 1, 2, 3, 4};
-
-    /*if (rank == 0) {
-        // Process A: query only Process B.
-        child_ranks = {1};
-    }
-    else if (rank == 1)
-    {
-        // Process B: query Processes C and D.
-        child_ranks = {2, 3};
-    }
-    else if (rank == 2)
-    {
-        // Process C: query Process E.
-        child_ranks = {4};
-    }
-    else if (rank == 3)
-    {
-        // Process D: query Process E.
-        child_ranks = {4};
-    } */
 
     std::size_t max_num_collisions_each_rank = static_cast<std::size_t>(5 * std::ceil(static_cast<double>(
         collision_manager->get_num_collisions()) / 5));
@@ -485,8 +443,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 1; ++i) {
         shmResponseWorkers.push_back(std::thread(handle_shared_memory_pending_responses, i, rank));
     }
-
-    //int port = 50051 + rank; // 50051, 50052, 50053, etc.
 
     std::string server_addresss = myconfig->getIP() + ":" + std::to_string(myconfig->getPortNumber());
     service.Run(server_addresss);
