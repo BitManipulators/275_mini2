@@ -39,7 +39,87 @@ target_link_libraries(cm_grpc_proto
 
 #------------------------------------------------------------
 
+find_package(Python REQUIRED COMPONENTS Interpreter)
 
+# Function to check if a Python package is installed
+function(check_python_package package_name result_var)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import ${package_name}"
+        RESULT_VARIABLE exit_code
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+    if(exit_code EQUAL 0)
+        set(${result_var} TRUE PARENT_SCOPE)
+    else()
+        set(${result_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+# Check for grpcio and grpcio-tools
+check_python_package(grpc GRPCIO_FOUND)
+check_python_package(grpc_tools GRPCIO_TOOLS_FOUND)
+
+if(GRPCIO_FOUND)
+    message(STATUS "Found grpcio")
+else()
+    message(WARNING "grpcio not found")
+endif()
+
+if(GRPCIO_TOOLS_FOUND)
+    message(STATUS "Found grpcio-tools")
+else()
+    message(WARNING "grpcio-tools not found")
+endif()
+
+if(NOT GRPCIO_FOUND OR NOT GRPCIO_TOOLS_FOUND)
+    message(FATAL_ERROR "Required Python packages not found. Please install grpcio and grpcio-tools.")
+endif()
+
+#------------------------------------------------------------
+
+# Define the output Python files in the build directory
+set(GENERATED_PYTHON_FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/collision_pb2.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/collision_pb2_grpc.py"
+)
+
+# Add a custom command to generate Python gRPC files using python3
+add_custom_command(
+    OUTPUT ${GENERATED_PYTHON_FILES}
+    COMMAND ${CMAKE_COMMAND} -E env python3 -m grpc_tools.protoc
+            -I ${cm_proto_path}
+            --python_out=${CMAKE_CURRENT_BINARY_DIR}
+            --grpc_python_out=${CMAKE_CURRENT_BINARY_DIR}
+            ${cm_proto}
+    DEPENDS ${cm_proto}
+)
+
+# Create a custom target that depends on the generated files
+add_custom_target(generate_python_grpc ALL
+    DEPENDS ${GENERATED_PYTHON_FILES}
+)
+
+#------------------------------------------------------------
+
+# Copy the Python client script to the binary directory.
+configure_file(${CMAKE_SOURCE_DIR}/client.py ${CMAKE_CURRENT_BINARY_DIR}/client.py COPYONLY)
+
+# Mark the copied script as executable (only works on UNIX-like systems).
+if(UNIX)
+  execute_process(
+    COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/client.py
+  )
+endif()
+
+# Create a custom target for the Python client.
+add_custom_target(python_client ALL
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/client.py
+  COMMENT "Running Python client"
+)
+
+# Optionally, if you want both executables to be in a unified list, you can list them:
+set(CLIENT_TARGETS python_client)
 
 add_library(
     collision_proto_converters
