@@ -1,12 +1,12 @@
 #pragma once
 
-#include "bakery_mutex.hpp"
-#include "free_list.hpp"
-#include "shared_memory.hpp"
+#include "collision_proto_converter.hpp"
+#include "collision_query_service_impl.hpp"
+#include "ring_buffer.hpp"
+#include "shared_memory/bakery_mutex.hpp"
+#include "shared_memory/free_list.hpp"
+#include "shared_memory/shared_memory.hpp"
 
-#include "../collision_proto_converter.hpp"
-#include "../collision_query_service_impl.hpp"
-#include "../ring_buffer.hpp"
 
 #include <atomic>
 #include <array>

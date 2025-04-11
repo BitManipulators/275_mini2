@@ -2,7 +2,7 @@
 #include "collision_proto_converter.hpp"
 #include "query_proto_converter.hpp"
 #include "ring_buffer.hpp"
-#include "shared_memory/shared_memory_manager.hpp"
+#include "shared_memory_manager.hpp"
 #include "yaml_parser.hpp"
 #include "myconfig.hpp"
 
