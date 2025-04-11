@@ -65,4 +65,8 @@ int MyConfig::getPortNumber(){
     return config.getPortNumber(rank);
 }
 
+std::string MyConfig::getIP(){
+    return config.getIP(rank);
+}
+
 

@@ -290,9 +290,9 @@ int main(int argc, char** argv) {
         responseWorkers.push_back(std::thread(handle_pending_responses, i, rank));
     }
 
-    int port = 50051 + rank; // 50051, 50052, 50053, etc.
-
-    service.Run(port);
+    //int port = 50051 + rank; // 50051, 50052, 50053, etc.
+    std::string server_addresss = myconfig->getIP() + ":" + std::to_string(myconfig->getPortNumber());
+    service.Run(server_addresss);
 
     for (auto& worker : requestWorkers) {
         worker.join();

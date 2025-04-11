@@ -60,8 +60,8 @@ CollisionQueryServiceImpl::~CollisionQueryServiceImpl() {
     cq_->Shutdown();
 }
 
-void CollisionQueryServiceImpl::Run(const int port) {
-    std::string server_address = "127.0.0.1:" + std::to_string(port);
+void CollisionQueryServiceImpl::Run(const std::string server_address ) {
+     //std::string server_address = "127.0.0.1:" + std::to_string(port);
 //    std::string server_address = "0.0.0.0:" + std::to_string(port);
 
     ServerBuilder builder;

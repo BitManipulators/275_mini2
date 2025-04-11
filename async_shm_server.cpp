@@ -436,9 +436,10 @@ int main(int argc, char** argv) {
         shmResponseWorkers.push_back(std::thread(handle_shared_memory_pending_responses, i, rank));
     }
 
-    int port = 50051 + rank; // 50051, 50052, 50053, etc.
+    //int port = 50051 + rank; // 50051, 50052, 50053, etc.
 
-    service.Run(port);
+    std::string server_addresss = myconfig->getIP() + ":" + std::to_string(myconfig->getPortNumber());
+    service.Run(server_addresss);
 
     cleanup_worker_threads();
     cleanup_shared_memory();

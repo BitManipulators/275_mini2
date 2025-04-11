@@ -141,7 +141,7 @@ void RunServer() {
     
     std::cout << "My Info Rank - " << myconfig->getRank() << " PORT - " << myconfig->getPortNumber() << std::endl ;
     
-    std::string myaddress = "127.0.0.1:" + std::to_string(port);
+    std::string myaddress = myconfig->getIP() + ":" + std::to_string(port);
     
     for (const auto& n : myconfig->getLogicalNeighbors()){
         std::cout << "Neighbor - " << n << std::endl;
@@ -153,7 +153,7 @@ void RunServer() {
     builder.AddListeningPort(myaddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
-    builder.SetSyncServerOption(grpc::ServerBuilder::SyncServerOption::MAX_POLLERS,1);
+    //builder.SetSyncServerOption(grpc::ServerBuilder::SyncServerOption::MAX_POLLERS,1);
 
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
 

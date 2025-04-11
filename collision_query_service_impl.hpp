@@ -64,7 +64,7 @@ public:
         std::unordered_map<std::size_t, GetCollisionsClientRequest>& pending_client_requests_map);
     ~CollisionQueryServiceImpl();
 
-    void Run(const int port);
+    void Run(const std::string server_address);
 
 private:
     void HandleRpcs();
