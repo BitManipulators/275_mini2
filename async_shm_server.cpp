@@ -23,7 +23,7 @@
 #include <google/protobuf/empty.pb.h>
 
 
-const std::string CSV_FILE = std::string("../Motor_Vehicle_Collisions_-_Crashes_20250123.csv");
+const std::string CSV_FILE = std::string("/home/suriya-018231499/cpp_projects/parser_data/Motor_Vehicle_Collisions_-_Crashes_20250204.csv");
 static std::unique_ptr<CollisionManager> collision_manager = std::make_unique<CollisionManager>(CSV_FILE);
 
 std::mutex pendingRequestsMutex{};
@@ -436,9 +436,10 @@ int main(int argc, char** argv) {
         shmResponseWorkers.push_back(std::thread(handle_shared_memory_pending_responses, i, rank));
     }
 
-    int port = 50051 + rank; // 50051, 50052, 50053, etc.
+    //int port = 50051 + rank; // 50051, 50052, 50053, etc.
 
-    service.Run(port);
+    std::string server_addresss = myconfig->getIP() + ":" + std::to_string(myconfig->getPortNumber());
+    service.Run(server_addresss);
 
     cleanup_worker_threads();
     cleanup_shared_memory();
